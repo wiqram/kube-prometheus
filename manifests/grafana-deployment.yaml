@@ -140,6 +140,12 @@ spec:
         - mountPath: /grafana-dashboard-definitions/0/workload-total
           name: grafana-dashboard-workload-total
           readOnly: false
+        - mountPath: /grafana-dashboard-definitions/yolo/yolo-pipeline
+          name: grafana-dashboard-yolo-pipeline
+          readOnly: false
+        - mountPath: /etc/grafana/provisioning/alerting
+          name: grafana-alerting-yolo
+          readOnly: false
         - mountPath: /etc/grafana
           name: grafana-config
           readOnly: false
@@ -237,6 +243,12 @@ spec:
       - configMap:
           name: grafana-dashboard-workload-total
         name: grafana-dashboard-workload-total
+      - configMap:
+          name: grafana-dashboard-yolo-pipeline
+        name: grafana-dashboard-yolo-pipeline
+      - configMap:
+          name: grafana-alerting-yolo
+        name: grafana-alerting-yolo
       - name: grafana-config
         secret:
           secretName: grafana-config

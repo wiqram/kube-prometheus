@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-yolo-pipeline
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/component: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: kube-prometheus
+data:
+  yolo-pipeline-dashboard.json: |
+    {
+      "uid": "yolo-pipeline",
+      "title": "YOLO signal → trade pipeline",
+      "description": "Built on the structured JSON audit lines every pipeline service emits to stdout (shipped by promtail). Substring filters keep the queries robust to log.Printf prefixes.",
+      "tags": ["yolo", "trading-safety"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "refresh": "30s",
+      "time": {"from": "now-6h", "to": "now"},
+      "templating": {
+        "list": [
+          {
+            "name": "scope",
+            "label": "Log scope",
+            "type": "constant",
+            "query": "{container=~\".+\"}",
+            "current": {"text": "{container=~\".+\"}", "value": "{container=~\".+\"}"}
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1, "type": "timeseries", "title": "Trades executed (decision=allowed)",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 0},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `execute_` |= `\"decision\":\"allowed\"` [$__auto]))", "legendFormat": "executed"}]
+        },
+        {
+          "id": 2, "type": "timeseries", "title": "Kill-switch rejections (ANY value here demands attention)",
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 0},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": "red"}}},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `\"decision\":\"killed\"` [$__auto]))", "legendFormat": "killed"}]
+        },
+        {
+          "id": 3, "type": "timeseries", "title": "Quarantined / failed signal extractions",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 7},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [
+            {"refId": "A", "expr": "sum(count_over_time($scope |= `signal_quarantined` [$__auto]))", "legendFormat": "quarantined"},
+            {"refId": "B", "expr": "sum(count_over_time($scope |= `signal_extraction_failed` [$__auto]))", "legendFormat": "extraction failed"}
+          ]
+        },
+        {
+          "id": 4, "type": "timeseries", "title": "Duplicate signal opens prevented (idempotency)",
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 7},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `signal_open_deduplicated` [$__auto]))", "legendFormat": "deduplicated"}]
+        },
+        {
+          "id": 5, "type": "timeseries", "title": "Capital-cap rejections (follower protected from over-risking)",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 14},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `capital_cap_rejected` [$__auto]))", "legendFormat": "cap rejections"}]
+        },
+        {
+          "id": 6, "type": "timeseries", "title": "Broker / execution errors",
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 14},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `execute_` |= `\"decision\":\"error\"` [$__auto]))", "legendFormat": "errors"}]
+        },
+        {
+          "id": 7, "type": "timeseries", "title": "Reconciliation drift (broker vs DB) — should be flat zero",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 21},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "targets": [{"refId": "A", "expr": "sum(count_over_time($scope |= `reconcile_drift` [$__auto]))", "legendFormat": "drift items"}]
+        },
+        {
+          "id": 8, "type": "logs", "title": "Latest audit events",
+          "gridPos": {"h": 9, "w": 12, "x": 12, "y": 21},
+          "datasource": {"type": "loki", "uid": "yolo-loki"},
+          "options": {"showTime": true, "sortOrder": "Descending"},
+          "targets": [{"refId": "A", "expr": "$scope |~ `\"audit\"|signal_quarantined|reconcile_`"}]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting-yolo
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/component: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: kube-prometheus
+data:
+  alerting.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: yolo-pipeline-safety
+        folder: YOLO
+        interval: 1m
+        rules:
+          - uid: yolo-kill-switch
+            title: Kill-switch rejection observed
+            condition: A
+            for: 0s
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: A trade was rejected by the kill switch — confirm this was intentional.
+            data:
+              - refId: A
+                relativeTimeRange: {from: 300, to: 0}
+                datasourceUid: yolo-loki
+                model:
+                  expr: sum(count_over_time({container=~".+"} |= `"decision":"killed"` [5m])) > 0
+                  queryType: instant
+          - uid: yolo-reconcile-drift
+            title: Broker vs DB position drift detected
+            condition: A
+            for: 0s
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: reconcileFollowerPositions found drift — open positions disagree between broker and DB.
+            data:
+              - refId: A
+                relativeTimeRange: {from: 3600, to: 0}
+                datasourceUid: yolo-loki
+                model:
+                  expr: sum(count_over_time({container=~".+"} |= `reconcile_drift` [1h])) > 0
+                  queryType: instant
+          - uid: yolo-quarantine-spike
+            title: Signal quarantine spike
+            condition: A
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: More than 5 quarantined/failed extractions in 15m — an expert's email format may have changed.
+            data:
+              - refId: A
+                relativeTimeRange: {from: 900, to: 0}
+                datasourceUid: yolo-loki
+                model:
+                  expr: sum(count_over_time({container=~".+"} |~ `signal_quarantined|signal_extraction_failed` [15m])) > 5
+                  queryType: instant
+          - uid: yolo-broker-errors
+            title: Broker execution error spike
+            condition: A
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: More than 5 execution errors in 15m — broker connectivity or rejected orders.
+            data:
+              - refId: A
+                relativeTimeRange: {from: 900, to: 0}
+                datasourceUid: yolo-loki
+                model:
+                  expr: sum(count_over_time({container=~".+"} |= `execute_` |= `"decision":"error"` [15m])) > 5
+                  queryType: instant

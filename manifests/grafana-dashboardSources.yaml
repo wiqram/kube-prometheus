@@ -13,6 +13,16 @@ data:
                 },
                 "orgId": 1,
                 "type": "file"
+            },
+            {
+                "folder": "YOLO",
+                "folderUid": "",
+                "name": "yolo",
+                "options": {
+                    "path": "/grafana-dashboard-definitions/yolo"
+                },
+                "orgId": 1,
+                "type": "file"
             }
         ]
     }
