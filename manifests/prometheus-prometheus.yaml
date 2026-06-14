@@ -32,10 +32,16 @@ spec:
   podMonitorSelector: {}
   probeNamespaceSelector: {}
   probeSelector: {}
-  replicas: 2
+  # Single-node cluster: 2 replicas was HA for no benefit. 1 replica.
+  replicas: 1
+  # Cap on-disk TSDB so Prometheus can't slowly fill the node's ephemeral storage.
+  retention: 7d
   resources:
     requests:
+      cpu: 100m
       memory: 400Mi
+    limits:
+      memory: 1Gi
   ruleNamespaceSelector: {}
   ruleSelector: {}
   securityContext:

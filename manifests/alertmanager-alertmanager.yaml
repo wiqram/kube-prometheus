@@ -20,7 +20,8 @@ spec:
       app.kubernetes.io/name: alertmanager
       app.kubernetes.io/part-of: kube-prometheus
       app.kubernetes.io/version: 0.25.0
-  replicas: 3
+  # Single-node cluster: a 3-replica gossip cluster is pure waste here. 1 replica.
+  replicas: 1
   resources:
     limits:
       cpu: 100m
