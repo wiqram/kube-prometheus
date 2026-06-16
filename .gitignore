@@ -7,4 +7,7 @@ crdschemas/
 .mdoxcache
 
 developer-workspace/gitpod/_output
-developer-workspace/codespaces/kind 
+developer-workspace/codespaces/kind
+
+# JetBrains IDE metadata (matches other repos in this cluster)
+.idea/
