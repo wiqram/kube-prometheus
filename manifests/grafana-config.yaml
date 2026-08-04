@@ -10,6 +10,22 @@ metadata:
   namespace: monitoring
 stringData:
   grafana.ini: |
+    [server]
+    # Grafana listens plain HTTP on :3000 (NodePort 30330); TLS is terminated by
+    # nginx-proxy-manager, which forwards grafana.traderyolo.com -> 172.16.238.2:30330.
+    # root_url is not how Grafana LISTENS, it is the address Grafana ADVERTISES to
+    # clients. Unset, it defaults to http://localhost:3000/ — which /api/frontend/settings
+    # duly hands to every caller. A browser survives that (it uses relative paths), but a
+    # phone does not: the Grafana mobile app dials the advertised address and resolves
+    # localhost to the handset. Same root cause for alert-notification deep links and
+    # share/snapshot URLs, which were all being minted as localhost too.
+    # protocol stays the default (http) — that is the listener; the https here is what
+    # the client sees after NPM.
+    domain = grafana.traderyolo.com
+    root_url = https://grafana.traderyolo.com/
+    # Deliberately NOT setting enforce_domain: direct NodePort access
+    # (http://172.16.238.2:30330) has to keep working for in-cluster/LAN debugging.
+
     [date_formats]
     default_timezone = UTC
 type: Opaque

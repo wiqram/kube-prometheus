@@ -8,6 +8,23 @@ metadata:
     app.kubernetes.io/version: 13.1.1
   name: grafana-datasources
   namespace: monitoring
+# ── The "Alertmanager" datasource (LOCAL ADDITION 2026-08-04) ─────────────────────
+# Platform alerts are Alertmanager-managed, not Grafana-managed (see
+# alertmanager-secret.yaml for why). This datasource is what keeps them VISIBLE in
+# Grafana's UI anyway, under Alerting -> Alert rules with the Alertmanager selected.
+#
+# "handleGrafanaManagedAlerts": false IS LOAD-BEARING. Set it true and Grafana starts
+# forwarding its OWN alert rules to this Alertmanager — which would hijack the yolo app
+# alerts away from their ntfy contact point (uid yolo-ntfy, topic yolo-grafana) and
+# silently reroute them through the platform receivers instead. The two alerting systems
+# are deliberately independent; this flag is what keeps them that way.
+#
+# "implementation": "prometheus" selects the vanilla Alertmanager API dialect (the
+# alternative, "mimir", speaks a different ruler API this cluster does not run).
+#
+# Reachability is NOT automatic: alertmanager-networkPolicy.yaml carries a matching
+# local ingress rule allowing app.kubernetes.io/name=grafana on 9093. Without it this
+# datasource shows an empty alert list rather than an error.
 stringData:
   datasources.yaml: |-
     {
@@ -30,6 +47,20 @@ stringData:
                 "orgId": 1,
                 "type": "loki",
                 "url": "http://loki.yolo.svc.cluster.local:3100",
+                "version": 1
+            },
+            {
+                "access": "proxy",
+                "editable": false,
+                "name": "Alertmanager",
+                "uid": "platform-alertmanager",
+                "orgId": 1,
+                "type": "alertmanager",
+                "url": "http://alertmanager-main.monitoring.svc:9093",
+                "jsonData": {
+                    "implementation": "prometheus",
+                    "handleGrafanaManagedAlerts": false
+                },
                 "version": 1
             }
         ]

@@ -26,9 +26,17 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/grafana-config: 2a882f8206244f3c80aeff49101b5fe9
+        # Bumped by hand when grafana-config.yaml changed (added [server] root_url).
+        # Upstream mints this from jsonnet; functionally the value only has to CHANGE when
+        # the ini changes, so `kubectl apply -f manifests/` rolls the pod — Grafana reads
+        # grafana.ini once at startup and never re-reads the mounted Secret. This is now
+        # plain md5 of the ini payload: python3 -c "import yaml,hashlib;
+        # print(hashlib.md5(yaml.safe_load(open('manifests/grafana-config.yaml'))['stringData']['grafana.ini'].encode()).hexdigest())"
+        checksum/grafana-config: 41f1a17880683e2abb6b393d7800b234
         checksum/grafana-dashboardproviders: e67a7f7e1db3c278d65db9ed24935a44
-        checksum/grafana-datasources: c09293e692784551064e1cae71b607f1
+        # Bumped by hand when the Alertmanager datasource was added (2026-08-04); same
+        # md5-of-payload scheme and reasoning as checksum/grafana-config above.
+        checksum/grafana-datasources: 67771c3cd181bcceb7d4c912704ce2e2
       labels:
         app.kubernetes.io/component: grafana
         app.kubernetes.io/name: grafana

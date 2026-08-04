@@ -1,0 +1,99 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/component: platform-hardware
+    app.kubernetes.io/name: platform-hardware
+    app.kubernetes.io/part-of: kube-prometheus
+    prometheus: k8s
+    role: alert-rules
+  name: platform-hardware-rules
+  namespace: monitoring
+# ── LOCAL ADDITION, not upstream kube-prometheus (2026-08-04) ──────────────────────
+# Upstream already covers node CPU/memory/filesystem, PV filling, pod crashloops and
+# scrape health across 138 rules. It cannot cover THIS BOX's hardware: the thermal
+# sensors and the RTX 3080 Ti. That is all this file adds — nothing here duplicates an
+# upstream rule, because a duplicate would mean two notifications for one condition.
+#
+# THRESHOLDS ARE DELIBERATELY COPIED from STEP0's resource-crunch-watch.sh RC_* defaults
+# (RC_CPU_TEMP_C=90, RC_GPU_TEMP_C=85, RC_GPU_MEM_PCT=90) so that moving this watching
+# from cron into Alertmanager does not silently change WHEN you get told. The `for: 15m`
+# reproduces that script's deliberate 3-consecutive-sample debounce (3 x the */5 cron);
+# a build spike is not a crunch, and an alert that fires on one sample gets muted.
+#
+# WHY NOT node_hwmon_temp_celsius: node-exporter runs with --no-collector.hwmon (upstream
+# kube-prometheus default), so that series DOES NOT EXIST on this cluster — a rule using
+# it would never fire and nothing would ever say so. The x86_pkg_temp thermal zone carries
+# the CPU package temperature instead, and is the same kernel interface
+# resource-crunch-watch.sh already falls back to. Verified present: 72 C at authoring.
+# Enabling the hwmon collector is therefore unnecessary; don't add it just to get coretemp.
+spec:
+  groups:
+    - name: platform-hardware.cpu
+      rules:
+        - alert: HostCPUPackageTempHigh
+          # i9-12900K, Tjmax 100 C. 90 C sustained is hot but not yet throttling.
+          expr: node_thermal_zone_temp{type="x86_pkg_temp"} > 90
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "CPU package temperature {{ $value | printf \"%.0f\" }}C exceeds 90C (sustained 15m)"
+            description: >-
+              CPU package is at {{ $value | printf "%.0f" }}C, above the 90C limit for 15
+              minutes.
+              Tjmax is 100 C. Check case airflow and what is loading the CPU
+              (Jenkins builds and docker image churn are the usual causes on this box).
+
+        - alert: HostCPUPackageTempCritical
+          expr: node_thermal_zone_temp{type="x86_pkg_temp"} > 95
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "CPU package temperature {{ $value | printf \"%.0f\" }}C exceeds 95C - approaching Tjmax"
+            description: >-
+              CPU package is at {{ $value | printf "%.0f" }}C, within 5C of Tjmax (100C),
+              and will begin thermal throttling. Shed load now.
+
+    - name: platform-hardware.gpu
+      rules:
+        - alert: GPUTempHigh
+          # RTX 3080 Ti throttles around 93 C; 85 C sustained is the early warning.
+          expr: DCGM_FI_DEV_GPU_TEMP > 85
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "GPU {{ $labels.gpu }} temperature {{ $value | printf \"%.0f\" }}C exceeds 85C (sustained 15m)"
+            description: >-
+              GPU {{ $labels.gpu }} ({{ $labels.modelName }}) is at
+              {{ $value | printf "%.0f" }}C, above the 85C limit for 15 minutes. It throttles
+              near 93C. ollama inference is the usual load on this GPU.
+
+        - alert: GPUTempCritical
+          expr: DCGM_FI_DEV_GPU_TEMP > 90
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "GPU {{ $labels.gpu }} temperature {{ $value | printf \"%.0f\" }}C exceeds 90C - throttling imminent"
+            description: >-
+              GPU {{ $labels.gpu }} ({{ $labels.modelName }}) is at
+              {{ $value | printf "%.0f" }}C and is about to thermal throttle (~93C).
+
+        - alert: GPUMemoryAlmostFull
+          # FB_USED and FB_FREE are MiB and share every label, so the division needs no
+          # on()/ignoring(). Percentage rather than absolute: the card is 12 GB and ollama
+          # already holds ~9.4 GB at rest, so an absolute threshold would be meaningless.
+          expr: >-
+            DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) > 0.90
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "GPU {{ $labels.gpu }} framebuffer {{ $value | humanizePercentage }} full"
+            description: >-
+              GPU {{ $labels.gpu }} framebuffer is {{ $value | humanizePercentage }} full -
+              less than 10% of the 12GB card is free. A further model load will fail or fall
+              back to CPU. Check what ollama is holding resident.
