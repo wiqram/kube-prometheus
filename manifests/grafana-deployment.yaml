@@ -71,13 +71,23 @@ spec:
           httpGet:
             path: /api/health
             port: http
+        # RAISED 2026-08-04 from limits 200Mi / requests 100Mi, which is what
+        # kube-prometheus has shipped since the Grafana 9.x era. On 13.1.1 that is not
+        # enough: the pod sat at 198Mi against the 200Mi cap and was OOMKilled (exit 137)
+        # in a loop. The failure was easy to miss because it is INTERMITTENT — the
+        # NodePort answers 200 between restarts, so API checks and `kubectl get po` both
+        # look fine, and the only visible symptom was a 502 from nginx-proxy-manager for
+        # whoever happened to load the page mid-restart.
+        #
+        # Grafana 13 is heavier than 9.3.2 on its own, and this instance also parses and
+        # holds ~37 provisioned dashboards including the two large Platform ones.
         resources:
           limits:
-            cpu: 200m
-            memory: 200Mi
+            cpu: 500m
+            memory: 512Mi
           requests:
             cpu: 100m
-            memory: 100Mi
+            memory: 256Mi
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
