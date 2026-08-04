@@ -1,0 +1,2959 @@
+# Platform dashboards — per-namespace performance & resource usage.
+#
+# OWNED BY THIS REPO, unlike the YOLO folder (see YOLO-OWNERSHIP.md). The split is by
+# SIGNAL, not by subject: everything here comes from platform-level sources the app does
+# not participate in — cAdvisor via the kubelet, kube-state-metrics — plus, for yolo, the
+# yolo_* series Prometheus already scrapes. Nothing here encodes yolo's or ollama's
+# business logic, so it cannot drift out of step with their repos the way the old
+# yolo-grafana-extras.yaml did. Business/pipeline dashboards stay in the app repos.
+#
+# EVERY query in these dashboards was probed against live Prometheus before being added
+# and returned a non-empty result. A panel that renders "No data" is worse than no panel:
+# it reads as broken monitoring and teaches people to stop trusting the dashboard.
+#
+# Two shapes of panel are still expected to read empty, and that is CORRECT: counters of
+# bad things (OOM kills, failed jobs, containers not ready) sit at zero on a healthy
+# cluster, which is why they use `or vector(0)` so they render 0 rather than "No data".
+#
+# NOTE ON cAdvisor: on this node the kubelet's container_* series carry `namespace` and
+# `pod` but NO `container` label, so every resource panel aggregates by pod and there is
+# no per-container breakdown. Do not add one expecting it to work.
+#
+# THIS FILE IS THE SOURCE OF TRUTH — edit the JSON here. It is mounted by
+# grafana-deployment.yaml and surfaced by the "Platform" provider in
+# grafana-dashboardSources.yaml; renaming either ConfigMap silently unmounts it.
+apiVersion: v1
+kind: ConfigMapList
+items:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: grafana-dashboard-platform-yolo
+    namespace: monitoring
+    labels:
+      app.kubernetes.io/component: grafana
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/part-of: kube-prometheus
+  data:
+    platform-yolo.json: |-
+      {
+          "editable": true,
+          "graphTooltip": 1,
+          "panels": [
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 0
+                  },
+                  "panels": [],
+                  "title": "Health & availability",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pods in Running phase right now.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 0,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{namespace=\"yolo\",phase=\"Running\"} == 1)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods running",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pending/Failed/Unknown. Completed CronJob pods are excluded by phase.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 4,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{namespace=\"yolo\",phase=~\"Pending|Failed|Unknown\"} == 1) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods not running",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Containers failing their readiness probe.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 8,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_container_status_ready{namespace=\"yolo\"} == 0) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Containers not ready",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Container restarts in the last hour. Sustained non-zero means a crash loop.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 1
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 5
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 12,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"yolo\"}[1h])) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Restarts (1h)",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Desired minus available across all Deployments. Non-zero = a rollout is stuck or a pod won't schedule.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 16,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_deployment_spec_replicas{namespace=\"yolo\"}) - sum(kube_deployment_status_replicas_available{namespace=\"yolo\"})",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Replicas unavailable",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Any value here means a container exceeded its memory limit and was killed.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 20,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(container_oom_events_total{namespace=\"yolo\"}[1h])) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "OOM kills (1h)",
+                  "type": "stat"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 5
+                  },
+                  "panels": [],
+                  "title": "Resource usage",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Cores. cAdvisor here carries no container label, so this is whole-pod usage.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 6
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"yolo\"}[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU by pod (top 10)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Working set is what the kernel counts against the memory limit \u2014 the number that gets a pod OOM-killed.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 6
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (pod) (container_memory_working_set_bytes{namespace=\"yolo\"}))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Memory working set by pod (top 10)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Only pods WITH a memory limit appear. Approaching 100% predicts the OOM-kill panel above.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 13
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum by (pod) (container_memory_working_set_bytes{namespace=\"yolo\"}) / clamp_min(sum by (pod) (container_spec_memory_limit_bytes{namespace=\"yolo\"} > 0), 1)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Memory as % of limit",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Share of CPU periods where the pod wanted CPU and was held back by its limit. This is the metric that explains 'slow but not busy'.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 13
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"yolo\"}[5m])) / clamp_min(sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"yolo\"}[5m])), 1)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU throttled %",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Used versus the sum of requests \u2014 i.e. whether the reservations match reality.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 20
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"yolo\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_pod_container_resource_requests{namespace=\"yolo\",resource=\"cpu\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "requested"
+                      }
+                  ],
+                  "title": "Namespace CPU: used vs requested",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Used versus the sum of requests.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 20
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(container_memory_working_set_bytes{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_pod_container_resource_requests{namespace=\"yolo\",resource=\"memory\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "requested"
+                      }
+                  ],
+                  "title": "Namespace memory: used vs requested",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "This host's /var/lib/docker is on an ageing SATA SSD; write storms here are the known cause of container-create timeouts.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 27
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"yolo\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Disk write throughput by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 27
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"yolo\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Disk read throughput by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Fraction of wall-clock the pod spent stalled waiting for CPU. Rises before throttling becomes obvious.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percentunit"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 34
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_pressure_cpu_waiting_seconds_total{namespace=\"yolo\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU pressure (PSI) \u2014 time waiting",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Fraction of wall-clock stalled on IO.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percentunit"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 34
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_pressure_io_waiting_seconds_total{namespace=\"yolo\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "IO pressure (PSI) \u2014 time waiting",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 41
+                  },
+                  "panels": [],
+                  "title": "Process footprint",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 0,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_processes{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Processes by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 8,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_threads{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Threads by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 16,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_sockets{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Open sockets by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 48
+                  },
+                  "panels": [],
+                  "title": "Application \u2014 gRPC (yolo_* metrics, scraped from the pods)",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "job comes from the Service's `app` label (jobLabel: app), so it means the same thing the code means.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "reqps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 49
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (job) (rate(yolo_grpc_requests_total[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{job}}"
+                      }
+                  ],
+                  "title": "Request rate by service",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "NOTE: `api` serves long-lived streaming RPCs (StreamMarketQuotes, StreamNotifications), so its p95 measures STREAM LIFETIME, not request latency. Read `user` for a true backend latency signal.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 49
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "histogram_quantile(0.95, sum by (le, job) (rate(yolo_grpc_request_duration_seconds_bucket[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{job}}"
+                      }
+                  ],
+                  "title": "p95 latency by service",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 56
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "histogram_quantile(0.50, sum by (le, job) (rate(yolo_grpc_request_duration_seconds_bucket[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{job}}"
+                      }
+                  ],
+                  "title": "p50 latency by service",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Concurrency. This is the metric the custom-metrics HPA path is wired to serve.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 56
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (job) (yolo_grpc_in_flight_requests)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{job}}"
+                      }
+                  ],
+                  "title": "In-flight requests by service",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Watch for anything that is not OK or Canceled.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "reqps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 63
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (code) (rate(yolo_grpc_requests_total[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{code}}"
+                      }
+                  ],
+                  "title": "Request rate by response code",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Canceled is excluded: a client hanging up on a stream is normal here, not an error.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "reqps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 63
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(yolo_grpc_requests_total{code!~\"OK|Canceled\"}[5m])) or vector(0)",
+                          "intervalFactor": 2,
+                          "legendFormat": "errors"
+                      }
+                  ],
+                  "title": "Error rate (excl. OK/Canceled)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "reqps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 70
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (method) (rate(yolo_grpc_requests_total[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{method}}"
+                      }
+                  ],
+                  "title": "Busiest methods (top 10)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Should equal the number of ServiceMonitor endpoints. A drop to 0 with pods healthy means the prometheus-k8s RBAC lost endpointslices access.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 70
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(up{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "up"
+                      }
+                  ],
+                  "title": "Scrape targets up",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 77
+                  },
+                  "panels": [],
+                  "title": "Workers & scheduled jobs",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "The async workers (publisher/subscriber) self-report readiness.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 78
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "yolo_worker_ready",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{job}} {{pod}}"
+                      }
+                  ],
+                  "title": "Worker ready (1 = healthy)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Plotted against yolo_worker_max_stale_seconds \u2014 crossing it is what 'wedged worker' means.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 78
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "yolo_worker_progress_stale_seconds",
+                          "intervalFactor": 2,
+                          "legendFormat": "stale {{job}}"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "yolo_worker_max_stale_seconds",
+                          "intervalFactor": 2,
+                          "legendFormat": "ceiling {{job}}"
+                      }
+                  ],
+                  "title": "Worker progress staleness vs its own ceiling",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A sawtooth is healthy: it climbs to the schedule interval then resets. A line that only climbs is a job that has stopped succeeding.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 85
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "time() - max by (cronjob) (kube_cronjob_status_last_successful_time{namespace=\"yolo\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{cronjob}}"
+                      }
+                  ],
+                  "title": "Time since last successful CronJob run",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 85
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_job_status_failed{namespace=\"yolo\"}) or vector(0)",
+                          "intervalFactor": 2,
+                          "legendFormat": "failed"
+                      }
+                  ],
+                  "title": "Failed jobs",
+                  "type": "timeseries"
+              }
+          ],
+          "refresh": "1m",
+          "schemaVersion": 39,
+          "tags": [
+              "platform",
+              "yolo",
+              "resources"
+          ],
+          "templating": {
+              "list": [
+                  {
+                      "current": {},
+                      "hide": 0,
+                      "label": "Data source",
+                      "name": "datasource",
+                      "query": "prometheus",
+                      "regex": "",
+                      "type": "datasource"
+                  }
+              ]
+          },
+          "time": {
+              "from": "now-6h",
+              "to": "now"
+          },
+          "timezone": "browser",
+          "title": "YOLO \u2014 performance & resources",
+          "uid": "platform-yolo",
+          "version": 1
+      }
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: grafana-dashboard-platform-ollama
+    namespace: monitoring
+    labels:
+      app.kubernetes.io/component: grafana
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/part-of: kube-prometheus
+  data:
+    platform-ollama.json: |-
+      {
+          "editable": true,
+          "graphTooltip": 1,
+          "panels": [
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 0
+                  },
+                  "panels": [],
+                  "title": "Health & availability",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pods in Running phase right now.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 0,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{namespace=\"ollama\",phase=\"Running\"} == 1)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods running",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pending/Failed/Unknown. Completed CronJob pods are excluded by phase.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 4,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{namespace=\"ollama\",phase=~\"Pending|Failed|Unknown\"} == 1) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods not running",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Containers failing their readiness probe.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 8,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_container_status_ready{namespace=\"ollama\"} == 0) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Containers not ready",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Container restarts in the last hour. Sustained non-zero means a crash loop.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 1
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 5
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 12,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=\"ollama\"}[1h])) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Restarts (1h)",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Desired minus available across all Deployments. Non-zero = a rollout is stuck or a pod won't schedule.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 16,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_deployment_spec_replicas{namespace=\"ollama\"}) - sum(kube_deployment_status_replicas_available{namespace=\"ollama\"})",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Replicas unavailable",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Any value here means a container exceeded its memory limit and was killed.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 20,
+                      "y": 1
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(container_oom_events_total{namespace=\"ollama\"}[1h])) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "OOM kills (1h)",
+                  "type": "stat"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 5
+                  },
+                  "panels": [],
+                  "title": "Resource usage",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Cores. cAdvisor here carries no container label, so this is whole-pod usage.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 6
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (pod) (rate(container_cpu_usage_seconds_total{namespace=\"ollama\"}[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU by pod (top 10)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Working set is what the kernel counts against the memory limit \u2014 the number that gets a pod OOM-killed.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 6
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (pod) (container_memory_working_set_bytes{namespace=\"ollama\"}))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Memory working set by pod (top 10)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Only pods WITH a memory limit appear. Approaching 100% predicts the OOM-kill panel above.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 13
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum by (pod) (container_memory_working_set_bytes{namespace=\"ollama\"}) / clamp_min(sum by (pod) (container_spec_memory_limit_bytes{namespace=\"ollama\"} > 0), 1)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Memory as % of limit",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Share of CPU periods where the pod wanted CPU and was held back by its limit. This is the metric that explains 'slow but not busy'.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 13
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum by (pod) (rate(container_cpu_cfs_throttled_periods_total{namespace=\"ollama\"}[5m])) / clamp_min(sum by (pod) (rate(container_cpu_cfs_periods_total{namespace=\"ollama\"}[5m])), 1)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU throttled %",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Used versus the sum of requests \u2014 i.e. whether the reservations match reality.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 20
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"ollama\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_pod_container_resource_requests{namespace=\"ollama\",resource=\"cpu\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "requested"
+                      }
+                  ],
+                  "title": "Namespace CPU: used vs requested",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Used versus the sum of requests.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 20
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(container_memory_working_set_bytes{namespace=\"ollama\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_pod_container_resource_requests{namespace=\"ollama\",resource=\"memory\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "requested"
+                      }
+                  ],
+                  "title": "Namespace memory: used vs requested",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "This host's /var/lib/docker is on an ageing SATA SSD; write storms here are the known cause of container-create timeouts.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 27
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_fs_writes_bytes_total{namespace=\"ollama\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Disk write throughput by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 27
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_fs_reads_bytes_total{namespace=\"ollama\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Disk read throughput by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Fraction of wall-clock the pod spent stalled waiting for CPU. Rises before throttling becomes obvious.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percentunit"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 34
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_pressure_cpu_waiting_seconds_total{namespace=\"ollama\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "CPU pressure (PSI) \u2014 time waiting",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Fraction of wall-clock stalled on IO.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "percentunit"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 34
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (rate(container_pressure_io_waiting_seconds_total{namespace=\"ollama\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "IO pressure (PSI) \u2014 time waiting",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 41
+                  },
+                  "panels": [],
+                  "title": "Process footprint",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 0,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_processes{namespace=\"ollama\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Processes by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 8,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_threads{namespace=\"ollama\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Threads by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "A steady climb here with flat traffic is the classic leak signature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 8,
+                      "x": 16,
+                      "y": 42
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (pod) (container_sockets{namespace=\"ollama\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{pod}}"
+                      }
+                  ],
+                  "title": "Open sockets by pod",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 48
+                  },
+                  "panels": [],
+                  "title": "Scheduled jobs",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "ollama-keep-warm runs every 8 minutes to hold the model in VRAM; a rising line means it has stopped.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 49
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "time() - max by (cronjob) (kube_cronjob_status_last_successful_time{namespace=\"ollama\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{cronjob}}"
+                      }
+                  ],
+                  "title": "Time since last successful CronJob run",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 49
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_job_status_failed{namespace=\"ollama\"}) or vector(0)",
+                          "intervalFactor": 2,
+                          "legendFormat": "failed"
+                      }
+                  ],
+                  "title": "Failed jobs",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {},
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 24,
+                      "x": 0,
+                      "y": 56
+                  },
+                  "options": {
+                      "content": "**No Ollama application metrics.** Ollama serves no Prometheus endpoint \u2014 `/metrics` on both `ollama:11434` and `ollama-router-stats:8080` returns **404** (checked 2026-08-04). `ollama-router-stats` renders an HTML page, not a metrics exposition. So there is no ServiceMonitor for this namespace and nothing here reports tokens/sec, queue depth, model load time or request counts. Getting those needs a metrics endpoint on the router first; the dashboard is the easy half.\n\n**No GPU metrics.** This box has an RTX 3080 Ti and Ollama is the main consumer, but the cluster runs only the `nvidia-device-plugin` (which *schedules* GPUs) \u2014 there is no DCGM exporter, so Prometheus holds no GPU utilisation, VRAM or temperature series at all. GPU pressure is currently watched only by STEP0's `resource-crunch-watch.sh`, which shells out to `nvidia-smi` on the host and pushes to ntfy `yolo-private-cloud-resource-crunch`. Adding `dcgm-exporter` plus a ServiceMonitor would put those series here \u2014 see STEP0 `plan.md`.\n\nEverything above is therefore container-level: what the kernel and Kubernetes can see without the application's cooperation.",
+                      "mode": "markdown"
+                  },
+                  "targets": [],
+                  "title": "What is NOT on this dashboard, and why",
+                  "type": "text"
+              }
+          ],
+          "refresh": "1m",
+          "schemaVersion": 39,
+          "tags": [
+              "platform",
+              "ollama",
+              "resources"
+          ],
+          "templating": {
+              "list": [
+                  {
+                      "current": {},
+                      "hide": 0,
+                      "label": "Data source",
+                      "name": "datasource",
+                      "query": "prometheus",
+                      "regex": "",
+                      "type": "datasource"
+                  }
+              ]
+          },
+          "time": {
+              "from": "now-6h",
+              "to": "now"
+          },
+          "timezone": "browser",
+          "title": "Ollama \u2014 performance & resources",
+          "uid": "platform-ollama",
+          "version": 1
+      }

@@ -23,6 +23,16 @@ data:
                 },
                 "orgId": 1,
                 "type": "file"
+            },
+            {
+                "folder": "Platform",
+                "folderUid": "",
+                "name": "platform",
+                "options": {
+                    "path": "/grafana-dashboard-definitions/platform"
+                },
+                "orgId": 1,
+                "type": "file"
             }
         ]
     }

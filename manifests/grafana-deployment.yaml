@@ -201,6 +201,12 @@ spec:
         - mountPath: /grafana-dashboard-definitions/yolo/yolo-pipeline
           name: grafana-dashboard-yolo-pipeline
           readOnly: false
+        - mountPath: /grafana-dashboard-definitions/platform/platform-yolo
+          name: grafana-dashboard-platform-yolo
+          readOnly: false
+        - mountPath: /grafana-dashboard-definitions/platform/platform-ollama
+          name: grafana-dashboard-platform-ollama
+          readOnly: false
         - mountPath: /etc/grafana/provisioning/alerting
           name: grafana-alerting-yolo
           readOnly: false
@@ -329,6 +335,12 @@ spec:
       - configMap:
           name: grafana-dashboard-yolo-pipeline
         name: grafana-dashboard-yolo-pipeline
+      - configMap:
+          name: grafana-dashboard-platform-yolo
+        name: grafana-dashboard-platform-yolo
+      - configMap:
+          name: grafana-dashboard-platform-ollama
+        name: grafana-dashboard-platform-ollama
       - configMap:
           name: grafana-alerting-yolo
         name: grafana-alerting-yolo
