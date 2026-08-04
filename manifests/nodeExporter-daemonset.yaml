@@ -35,7 +35,28 @@ spec:
         - --no-collector.wifi
         - --no-collector.hwmon
         - --no-collector.btrfs
-        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/k3s/containerd/.+|var/lib/docker/.+|var/lib/kubelet/pods/.+)($|/)
+        # LOCAL ADDITION 2026-08-04 — everything from `|data|` onward is ours; the prefix is
+        # upstream. WHY: node-exporter reports one series per MOUNTPOINT, but alert rules
+        # like NodeFilesystemSpaceFillingUp fire per series, so a single full disk pages
+        # once per bind-mount of it. On this box that meant 52 filesystem series for FOUR
+        # real disks, and a genuine /var alert arrived SEVEN times.
+        #
+        # /dev/sda5 was the worst: 35 mountpoints, every one an individual NVIDIA driver
+        # file (libnvidia-*.so, nvidia-smi, gsp firmware) bind-mounted in by the container
+        # runtime. Had sda5 ever crossed the threshold that is 35 identical pages.
+        #
+        # Excluded here: the nvidia file mounts, docker's injected /etc/hostname|hosts|
+        # resolv.conf, systemd's /run/credentials ramfs, and the sda7 duplicates
+        # (/data, /tmp/hostpath-provisioner, /tmp/hostpath_pv) which are the same device
+        # as /var. Result: 52 series -> 7, exactly one per physical device (plus three
+        # genuinely distinct tmpfs).
+        #
+        # NOTE /dev/sda5 (the host root) is now represented by its /usr/lib/modules mount,
+        # so an alert about "/usr/lib/modules" means the HOST ROOT is filling, not a
+        # modules directory. That mount is kept precisely because it is the only sda5 path
+        # whose name has no driver version in it — the libnvidia-*.so paths embed
+        # "580.173.02" and would silently stop matching on the next driver upgrade.
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/k3s/containerd/.+|var/lib/docker/.+|var/lib/kubelet/pods/.+|data|etc/(hostname|hosts|resolv\.conf)|etc/nvidia/.+|run/credentials/.+|run/nvidia-persistenced/.+|tmp/hostpath.*|usr/bin/nvidia-.+|usr/lib/firmware/nvidia/.+|usr/lib/x86_64-linux-gnu/.+)($|/)
         - --collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$
         - --collector.netdev.device-exclude=^(veth.*|[a-f0-9]{15})$
         image: quay.io/prometheus/node-exporter:v1.11.1
