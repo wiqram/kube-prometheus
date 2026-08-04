@@ -10,6 +10,14 @@ metadata:
   namespace: monitoring
 spec:
   replicas: 1
+  # Recreate is REQUIRED now that grafana-storage is a ReadWriteOnce claim: under the
+  # default RollingUpdate the new pod cannot mount the volume until the old one releases
+  # it, and the old one is not terminated until the new one is Ready — a deadlock that
+  # presents as a rollout stuck forever with the new pod Pending on FailedAttachVolume.
+  # The cost is a few seconds of Grafana downtime per rollout, which is the right trade
+  # against losing alert state on every restart.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/component: grafana
@@ -232,7 +240,13 @@ spec:
         runAsUser: 65534
       serviceAccountName: grafana
       volumes:
-      - emptyDir: {}
+      # Durable, not emptyDir — see grafana-dataVolume.yaml. The emptyDir this replaces
+      # destroyed Grafana's SQLite DB on every restart, taking unified-alerting state and
+      # silences with it: a restart re-fired already-firing alerts and silently dropped
+      # any silence, on the Grafana that is the only thing between a YOLO trading safety
+      # condition and a human.
+      - persistentVolumeClaim:
+          claimName: grafana-storage
         name: grafana-storage
       - name: grafana-datasources
         secret:

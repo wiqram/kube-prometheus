@@ -1,0 +1,73 @@
+# grafana-data — durable storage for /var/lib/grafana (added 2026-08-04).
+#
+# kube-prometheus mounts Grafana's data directory from an **emptyDir**, and over one
+# session that single choice caused four separate problems:
+#
+#   1. the admin password reverted to the built-in admin/admin on every pod restart
+#      (worked around separately by sourcing it from Vault into env vars — that fix
+#      stays, because env is what Grafana re-applies on startup);
+#   2. every restart logged every user out, because sessions live in the same SQLite DB;
+#   3. **unified-alerting state was destroyed on every restart** — this is the serious
+#      one. Grafana keeps alert instance state and silences in that DB, so a restart
+#      re-fires already-firing alerts and silently drops any silence. On a box whose
+#      Grafana is the only thing standing between a YOLO trading safety condition and a
+#      human (see YOLO-OWNERSHIP.md), that is not acceptable;
+#   4. nothing about the instance was inspectable after a crash — no annotations, no
+#      dashboard version history.
+#
+# Provisioned content (dashboards, datasources, alert RULES) is unaffected either way:
+# it comes from mounted ConfigMaps every start. This volume is for the state Grafana
+# generates at runtime.
+#
+# Same pattern as k8s/vault-backup/vault-data-pv.yaml and k8s/registry/00-pv.yaml in
+# STEP0: hostPath on the node's /mnt, which minikube mounts from the host's
+# /mnt/minikube-backups/minikube-mnt (the sdb1 shared volume). That means the data
+# survives `minikube delete` natively AND rides the weekly DR tar.
+#
+# FILENAME IS DELIBERATE: `grafana-dataVolume.yaml` sorts BEFORE
+# `grafana-deployment.yaml`, so a single `kubectl apply -f manifests/` creates the claim
+# before the Deployment that mounts it. Renaming it to something sorting later would
+# still work — the pod just stays Pending until the PVC appears — but this avoids the
+# confusing intermediate state on a fresh bootstrap.
+#
+# reclaimPolicy Retain + claimRef pin: deleting the PVC never deletes the data, and no
+# other claim can steal the volume.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: grafana-data-pv
+  labels:
+    app.kubernetes.io/component: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  claimRef:
+    namespace: monitoring
+    name: grafana-storage
+  hostPath:
+    path: /mnt/grafana-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-storage
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/component: grafana
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  volumeName: grafana-data-pv
+  resources:
+    requests:
+      storage: 2Gi
