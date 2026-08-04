@@ -1,0 +1,188 @@
+# ---------------------------------------------------------------------------
+# dcgm-exporter — GPU metrics for Prometheus (added 2026-08-04, STEP0 plan.md #17)
+#
+# This box exists for GPU work (ollama, and the quant paths in yolo) and Prometheus held
+# ZERO GPU series until this landed. The `nvidia-device-plugin` addon only *schedules*
+# GPUs onto pods; it exports nothing. GPU pressure was visible only through STEP0's
+# `resource-crunch-watch.sh`, which shells out to `nvidia-smi` every 5 minutes and pushes
+# to ntfy — a threshold alarm with no history, so "was the GPU saturated when ollama got
+# slow last Tuesday?" was unanswerable.
+#
+##### THE ONE THING YOU MUST NOT CHANGE ####################################
+#
+# This pod deliberately does **NOT** request `nvidia.com/gpu`.
+#
+# The node advertises `nvidia.com/gpu: 1` — exactly one — and the **ollama** Deployment
+# already holds it. A `resources.limits.nvidia.com/gpu: 1` here would make this DaemonSet
+# permanently Pending (best case) or take the GPU away from ollama (worst case). Adding
+# that line is the single most likely "helpful" edit someone will make to this file, and
+# it breaks the thing being monitored.
+#
+# It works without the request because the node's dockerd sets `"default-runtime":
+# "nvidia"`, so `nvidia-container-runtime` injects the GPU into any container that asks
+# via NVIDIA_VISIBLE_DEVICES. That is why the two env vars below are load-bearing rather
+# than decorative. Verified on this cluster before deploying: a pod with these env vars
+# and no GPU resource request sees the full device.
+#
+##### WHAT WORKS ON THIS GPU, AND WHAT DOES NOT ############################
+#
+# DCGM targets datacenter GPUs; this is a consumer GeForce RTX 3080 Ti. It runs fine, but
+# the profiling ("PROF") fields are unavailable and dcgm-exporter logs a WARN per field at
+# startup — `DCGM_FI_PROF_DRAM_ACTIVE`, `DCGM_FI_PROF_PCIE_TX_BYTES`,
+# `DCGM_FI_PROF_PCIE_RX_BYTES`. Those warnings are EXPECTED and harmless; do not go
+# hunting for a fix. Likewise NvSwitch/NvLink/CPU-hierarchy "not collecting" lines — this
+# machine has none of that hardware.
+#
+# Confirmed working here: GPU_UTIL, FB_USED/FB_FREE (VRAM MiB), GPU_TEMP, POWER_USAGE,
+# SM_CLOCK/MEM_CLOCK, MEM_COPY_UTIL, ENC/DEC_UTIL, XID_ERRORS, TOTAL_ENERGY_CONSUMPTION.
+#
+# NOTE ON pod attribution: mapping GPU usage to the consuming pod needs the kubelet
+# pod-resources socket, mounted below. On this single-node box with one GPU held by one
+# pod it is not strictly needed — but it costs nothing and makes the metrics correct if a
+# second GPU workload ever appears.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: gpu-metrics
+    app.kubernetes.io/part-of: kube-prometheus
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: gpu-metrics
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcgm-exporter
+      app.kubernetes.io/component: gpu-metrics
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: dcgm-exporter
+        app.kubernetes.io/component: gpu-metrics
+        app.kubernetes.io/part-of: kube-prometheus
+    spec:
+      serviceAccountName: dcgm-exporter
+      automountServiceAccountToken: false
+      # Single-node box, but a nodeSelector keeps this honest if a GPU-less node is ever
+      # added: only schedule where the device plugin has advertised a GPU.
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: dcgm-exporter
+        image: nvcr.io/nvidia/k8s/dcgm-exporter:4.1.1-4.0.4-ubuntu22.04
+        env:
+        # Load-bearing — see the header. This is what gets the GPU in WITHOUT consuming
+        # the single `nvidia.com/gpu` allocation that ollama depends on.
+        - name: NVIDIA_VISIBLE_DEVICES
+          value: all
+        - name: NVIDIA_DRIVER_CAPABILITIES
+          value: compute,utility
+        - name: DCGM_EXPORTER_LISTEN
+          value: ":9400"
+        # Label metrics with the consuming pod via the kubelet pod-resources API.
+        - name: DCGM_EXPORTER_KUBERNETES
+          value: "true"
+        # This host has 24 hardware threads and there is no CPU limit set below, so the
+        # Go runtime otherwise starts with GOMAXPROCS=24 and sizes its heap arenas and
+        # per-P caches for a 24-way machine. For an exporter that scrapes one GPU every
+        # 30s that is pure overhead, and it was a direct contributor to the first deploy
+        # of this file being OOMKilled (exit 137) at a 256Mi limit. Pinning it to 2 keeps
+        # the runtime small; it has no effect on scrape correctness.
+        - name: GOMAXPROCS
+          value: "2"
+        ports:
+        - name: metrics
+          containerPort: 9400
+        securityContext:
+          runAsNonRoot: false
+          runAsUser: 0
+          capabilities:
+            add: ["SYS_ADMIN"]
+        # Sized from the OOMKill above, not guessed: dcgm-exporter embeds the DCGM host
+        # engine and NVML, which are heavier than a typical Go exporter. 256Mi was not
+        # enough to reach first scrape. If this ever OOMs again, raise the limit rather
+        # than assuming the GPU or the driver is at fault — the log stops right after
+        # "NVML provider successfully initialized!" in that failure mode, which looks
+        # like a GPU problem and is not one.
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+        volumeMounts:
+        - name: pod-gpu-resources
+          mountPath: /var/lib/kubelet/pod-resources
+          readOnly: true
+        livenessProbe:
+          httpGet: { path: /health, port: metrics }
+          initialDelaySeconds: 45
+          periodSeconds: 20
+        readinessProbe:
+          httpGet: { path: /health, port: metrics }
+          initialDelaySeconds: 20
+          periodSeconds: 10
+      volumes:
+      - name: pod-gpu-resources
+        hostPath:
+          path: /var/lib/kubelet/pod-resources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: gpu-metrics
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 9400
+    targetPort: metrics
+  selector:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: gpu-metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dcgm-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: dcgm-exporter
+    app.kubernetes.io/component: gpu-metrics
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  namespaceSelector:
+    matchNames: ["monitoring"]
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dcgm-exporter
+      app.kubernetes.io/component: gpu-metrics
+  endpoints:
+  # BY NAME, not by number — renaming the Service port silently stops the scrape.
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
