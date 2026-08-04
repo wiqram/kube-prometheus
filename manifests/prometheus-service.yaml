@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/instance: k8s
     app.kubernetes.io/name: prometheus
     app.kubernetes.io/part-of: kube-prometheus
-    app.kubernetes.io/version: 2.41.0
+    app.kubernetes.io/version: 3.13.2
   name: prometheus-k8s
   namespace: monitoring
 spec:
@@ -14,8 +14,8 @@ spec:
   ports:
   - name: web
     port: 9090
-    nodePort: 30339
     targetPort: web
+    nodePort: 30339
   - name: reloader-web
     port: 8080
     targetPort: reloader-web
