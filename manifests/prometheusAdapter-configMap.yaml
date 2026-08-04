@@ -1,6 +1,93 @@
 apiVersion: v1
 data:
   config.yaml: |-
+    # ── "rules" — custom.metrics.k8s.io (see manifests/CUSTOM-METRICS.md) ──────
+    #
+    # These make application metrics that Prometheus already scrapes queryable
+    # through the aggregated custom metrics API, which is the only thing an
+    # `autoscaling/v2` HPA with `type: Pods` can read. Without them the API is
+    # registered but serves nothing, and an HPA pointing at a metric here just
+    # reports <unknown> forever.
+    #
+    # SCOPE IS AN EXPLICIT ALLOWLIST, ON PURPOSE. The prefix group `^(yolo)_`
+    # appears in all three seriesQuery regexes. The obvious alternative — the
+    # upstream-style catch-all `{namespace!="",pod!=""}` — would make the
+    # adapter enumerate and re-plan EVERY series in this Prometheus on each
+    # --metrics-relist-interval (1m). On a single 48 GB node also running the
+    # apps, that is a real cost for metrics nobody autoscales on.
+    #
+    # TO ADD AN APP: extend the group in all three regexes below, e.g.
+    # `^(yolo|helpmepdf)_`, and re-apply. Nothing else changes — the app just
+    # has to expose pod-scraped metrics with that name prefix.
+    #
+    # Why the pod/namespace overrides: the adapter has to map a Prometheus
+    # series onto a Kubernetes object before an HPA can ask "this metric, for
+    # the pods behind this Deployment". The `pod` and `namespace` labels the
+    # kube-prometheus ServiceMonitor relabelling attaches are what make that
+    # association possible; a metric scraped without them is unusable here.
+    "rules":
+    # 1. COUNTERS -> per-second rate.  yolo_grpc_requests_total
+    #                                    -> yolo_grpc_requests_per_second
+    # Rate, never the raw counter: a counter only ever climbs, so an HPA
+    # targeting one would scale out once and never scale back in.
+    - "seriesQuery": '{__name__=~"^(yolo)_.*_total$",namespace!="",pod!=""}'
+      "resources":
+        "overrides":
+          "namespace":
+            "resource": "namespace"
+          "pod":
+            "resource": "pod"
+      "name":
+        "matches": "^(.*)_total$"
+        "as": "${1}_per_second"
+      "metricsQuery": 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+    # 2. GAUGES -> as-is.  yolo_grpc_in_flight_requests
+    # seriesFilters excludes the counter and the three histogram-derived
+    # series, which rules 1 and 3 own. Without it a `_bucket` series would also
+    # match here and be summed across `le` — a meaningless number.
+    - "seriesQuery": '{__name__=~"^(yolo)_.*",namespace!="",pod!=""}'
+      "seriesFilters":
+      - "isNot": "^(yolo)_.*_(total|bucket|sum|count)$"
+      "resources":
+        "overrides":
+          "namespace":
+            "resource": "namespace"
+          "pod":
+            "resource": "pod"
+      "name":
+        "matches": "^(.*)$"
+        "as": "${1}"
+      "metricsQuery": 'sum(<<.Series>>{<<.LabelMatchers>>}) by (<<.GroupBy>>)'
+    # 3. HISTOGRAMS -> p95, in MILLISECONDS.
+    #    yolo_grpc_request_duration_seconds_bucket
+    #      -> yolo_grpc_request_duration_p95_milliseconds
+    # Milliseconds, not seconds: custom metric values cross the API as
+    # resource.Quantity, so a p95 of 0.0095s round-trips as "9m" (nine
+    # milli-units) and an HPA target has to be written the same way. Whole
+    # milliseconds keep both the target and `kubectl get --raw` readable.
+    # NOTE: histogram_quantile over a bucket with no traffic in the window is
+    # NaN, and the adapter omits NaN samples. A pod that is idle therefore has
+    # NO value for this metric, and an HPA on it reports <unknown> until
+    # traffic arrives — correct, but do not set a latency HPA on a service
+    # that is idle for long stretches.
+    - "seriesQuery": '{__name__=~"^(yolo)_.*_seconds_bucket$",namespace!="",pod!=""}'
+      "resources":
+        "overrides":
+          "namespace":
+            "resource": "namespace"
+          "pod":
+            "resource": "pod"
+      "name":
+        "matches": "^(.*)_seconds_bucket$"
+        "as": "${1}_p95_milliseconds"
+      "metricsQuery": 'histogram_quantile(0.95, sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (le, <<.GroupBy>>)) * 1000'
+    # ── "resourceRules" — metrics.k8s.io. INERT ON THIS CLUSTER. ──────────────
+    # Kept only because it is what upstream jsonnet generates. The adapter does
+    # not serve metrics.k8s.io here: its APIService claim was removed in
+    # 88c88ce8 because these queries return nothing on this node (the kubelet's
+    # cAdvisor series lack pod/namespace/container labels), and metrics-server
+    # in kube-system owns that API. Do not "fix" these queries expecting
+    # `kubectl top` to change — it is served elsewhere.
     "resourceRules":
       "cpu":
         "containerLabel": "container"

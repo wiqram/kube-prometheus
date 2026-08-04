@@ -1,0 +1,48 @@
+# ---------------------------------------------------------------------------
+# custom.metrics.k8s.io — served by prometheus-adapter.
+#
+# READ THIS BEFORE ASSUMING IT IS THE FILE THAT WAS DELETED IN 88c88ce8.
+# It is NOT. That commit removed prometheusAdapter-apiService.yaml, which
+# claimed `v1beta1.metrics.k8s.io` — the RESOURCE metrics API. On this node the
+# adapter cannot serve that one (the kubelet's cAdvisor series carry no
+# pod/namespace/container labels, so `kubectl top pod` returned empty), and
+# metrics-server in kube-system owns it. That must stay true; do not re-add it.
+#
+# `custom.metrics.k8s.io` is a DIFFERENT aggregated API with its own singleton
+# APIService object. Registering it here does not touch metrics.k8s.io and
+# cannot re-break `kubectl top`. The two coexist:
+#
+#   v1beta1.metrics.k8s.io        -> kube-system/metrics-server   (cpu/memory, `top`, CPU HPAs)
+#   v1beta1.custom.metrics.k8s.io -> monitoring/prometheus-adapter (app metrics, custom HPAs)
+#
+# Verify after applying:
+#   kubectl get apiservice v1beta1.metrics.k8s.io          # -> kube-system/metrics-server, True
+#   kubectl get apiservice v1beta1.custom.metrics.k8s.io   # -> monitoring/prometheus-adapter, True
+#
+# The metrics this serves are defined by the "rules" block in
+# prometheusAdapter-configMap.yaml. See manifests/CUSTOM-METRICS.md.
+#
+# insecureSkipTLSVerify: the adapter self-signs its serving cert into
+# --cert-dir=/var/run/serving-cert (an emptyDir, regenerated every restart), so
+# there is no stable CA for the apiserver to pin. Same setting the deleted
+# resource-metrics APIService used, and what kube-prometheus ships upstream.
+# ---------------------------------------------------------------------------
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  labels:
+    app.kubernetes.io/component: metrics-adapter
+    app.kubernetes.io/name: prometheus-adapter
+    app.kubernetes.io/part-of: kube-prometheus
+    app.kubernetes.io/version: 0.10.0
+  name: v1beta1.custom.metrics.k8s.io
+spec:
+  group: custom.metrics.k8s.io
+  groupPriorityMinimum: 100
+  insecureSkipTLSVerify: true
+  service:
+    name: prometheus-adapter
+    namespace: monitoring
+    port: 443
+  version: v1beta1
+  versionPriority: 100

@@ -29,7 +29,39 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-      - env: []
+      # Admin login, pinned. `grafana-storage` below is an emptyDir, so
+      # Grafana's SQLite DB — and with it the admin password — is destroyed
+      # on every pod restart. Grafana re-applies GF_SECURITY_ADMIN_USER /
+      # GF_SECURITY_ADMIN_PASSWORD to the admin account on each startup, so
+      # setting them here is what makes the login survive a restart, a
+      # rollout and a full minikube rebuild.
+      #
+      # The `grafana-admin` Secret is NOT defined in this repo and is not in
+      # git anywhere. Vault (kv/grafana/admin) is the source of truth;
+      # STEP0's sync-grafana-admin.sh projects it into this namespace and is
+      # run by start-scratch.sh / restart-minikube.sh after Vault is unsealed.
+      #
+      # optional: true is deliberate. A `kubectl apply -f manifests/` on a
+      # cluster where that sync has not run yet must still bring Grafana up
+      # (on its built-in admin/admin) rather than wedge the pod in
+      # CreateContainerConfigError — monitoring must never be the thing that
+      # cannot start while you are trying to find out what else is broken.
+      # It is also why Grafana does NOT read Vault directly via the agent
+      # injector: that would make the whole observability stack unable to
+      # boot whenever Vault is sealed or down.
+      - env:
+        - name: GF_SECURITY_ADMIN_USER
+          valueFrom:
+            secretKeyRef:
+              key: admin-user
+              name: grafana-admin
+              optional: true
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: admin-password
+              name: grafana-admin
+              optional: true
         image: grafana/grafana:9.3.2
         name: grafana
         ports:
