@@ -3920,6 +3920,704 @@ items:
                       "y": 103
                   },
                   "panels": [],
+                  "title": "Model server \u2014 Ollama itself (ollama-metrics-shim)",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Whether /api/ps answered on the last poll. This is the SERVER, distinct from the router's upstream health check.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "red",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 1
+                                  }
+                              ]
+                          }
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 0,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_up",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Ollama up",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Models held in memory. Dropping to 0 means the next request pays a full cold load.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "red",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 4,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_models_loaded",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Models resident",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Headline throughput, measured by a small synthetic generation every 5 minutes. Falls when the GPU is contended or the model has spilled out of VRAM.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "red",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 20
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 50
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 8,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_tokens_per_second",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Generation tokens/sec",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Prompt processing is batched and so is far faster than sequential generation. A collapse here usually means CPU offload, not GPU load.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 12,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_prompt_tokens_per_second",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Prefill tokens/sec",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Cross-check against DCGM's FB_USED above: a large gap means something other than Ollama is holding VRAM.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 16,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(ollama_model_vram_bytes)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "VRAM held by models",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Countdown to Ollama unloading the model. The ollama-keep-warm CronJob (every 8m) should keep resetting this \u2014 a steady decline toward zero means keep-warm has stopped.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "red",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 60
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 300
+                                  }
+                              ]
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 4,
+                      "x": 20,
+                      "y": 104
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "min(ollama_model_expires_in_seconds)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Evicted in",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Sampled every 5 minutes by the probe, so this is a coarse trend, not per-request latency. Real per-request timings would need a proxy in the inference path, which was deliberately not built \u2014 see the note at the bottom of this dashboard.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 108
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_tokens_per_second",
+                          "intervalFactor": 2,
+                          "legendFormat": "generation tok/s"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_prompt_tokens_per_second",
+                          "intervalFactor": 2,
+                          "legendFormat": "prefill tok/s"
+                      }
+                  ],
+                  "title": "Throughput over time",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Near-zero while the model is resident. A spike means Ollama had to pull the model back into VRAM \u2014 i.e. keep-warm lapsed or something evicted it.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 108
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_load_duration_seconds",
+                          "intervalFactor": 2,
+                          "legendFormat": "load duration"
+                      }
+                  ],
+                  "title": "Model load time per probe",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Two independent sources for the same physical memory. They should track closely; a persistent gap is another process on the GPU.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 115
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(ollama_model_vram_bytes)",
+                          "intervalFactor": 2,
+                          "legendFormat": "ollama models"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_FB_USED * 1024 * 1024",
+                          "intervalFactor": 2,
+                          "legendFormat": "GPU total used"
+                      }
+                  ],
+                  "title": "VRAM: Ollama's view vs the GPU's",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Expected shape is a sawtooth resetting on every keep-warm ping. A monotonic decline means the CronJob has stopped.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 115
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_model_expires_in_seconds",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}}"
+                      }
+                  ],
+                  "title": "Eviction countdown (keep-warm health)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Skips are not failures: the probe refuses to run when no model is resident, because probing would itself force a ~9.5 GB cold load. Sustained skipping means the server is idle and unloaded.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 122
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_probe_success",
+                          "intervalFactor": 2,
+                          "legendFormat": "success (1/0)"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "increase(ollama_probe_errors_total[1h])",
+                          "intervalFactor": 2,
+                          "legendFormat": "errors 1h"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "increase(ollama_probes_skipped_total[1h])",
+                          "intervalFactor": 2,
+                          "legendFormat": "skipped 1h"
+                      }
+                  ],
+                  "title": "Probe outcomes",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "On-disk versus resident size. Equal values mean the model is fully GPU-offloaded.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 122
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_model_size_bytes",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}} on disk"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "ollama_model_vram_bytes",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}} in VRAM"
+                      }
+                  ],
+                  "title": "Model footprint",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 129
+                  },
+                  "panels": [],
                   "title": "Scheduled jobs",
                   "type": "row"
               },
@@ -3946,7 +4644,7 @@ items:
                       "h": 7,
                       "w": 12,
                       "x": 0,
-                      "y": 104
+                      "y": 130
                   },
                   "options": {
                       "legend": {
@@ -3995,7 +4693,7 @@ items:
                       "h": 7,
                       "w": 12,
                       "x": 12,
-                      "y": 104
+                      "y": 130
                   },
                   "options": {
                       "legend": {
@@ -4032,17 +4730,17 @@ items:
                       "overrides": []
                   },
                   "gridPos": {
-                      "h": 6,
+                      "h": 7,
                       "w": 24,
                       "x": 0,
-                      "y": 111
+                      "y": 137
                   },
                   "options": {
-                      "content": "**GPU metrics** come from `dcgm-exporter` (added 2026-08-04, kube-prometheus `manifests/dcgmExporter.yaml`). It deliberately does **not** request `nvidia.com/gpu` \u2014 the node advertises exactly one and ollama holds it \u2014 and gets the device via the node's `nvidia` default container runtime instead. DCGM's *profiling* fields (PCIE throughput, DRAM active) are unavailable on this consumer GeForce card and are absent by design, not by fault.\n\n**Inference counts** come from the ollama-router stats sidecar's `/metrics`, and **proxy/upstream health** from HAProxy's built-in Prometheus exporter on `:8405`. Between them you get requests by model and by box, upstream up/down, queueing and connect time.\n\n**Still not measured: the Ollama server itself.** `/metrics` on `ollama:11434` returns 404 \u2014 upstream Ollama exposes no Prometheus endpoint \u2014 so tokens/sec, prompt-vs-generation split, model load time and queue depth *inside* the server remain invisible. Everything above is measured at the proxy or at the GPU, which is as close as you can get without the server's cooperation. See STEP0 `plan.md` #18.",
+                      "content": "Three independent sources, none of which sit in the inference path:\n\n**GPU** \u2014 `dcgm-exporter` (kube-prometheus `manifests/dcgmExporter.yaml`). It deliberately does **not** request `nvidia.com/gpu`: the node advertises exactly one and ollama holds it, so it takes the device via the node's `nvidia` default container runtime instead. DCGM's *profiling* fields are unavailable on this consumer GeForce card by design, not by fault.\n\n**Router** \u2014 HAProxy's built-in exporter on `:8405` plus the stats sidecar's `/metrics`, giving requests by model and by box and upstream up/down (including the silent 10GbE failover to prod).\n\n**Model server** \u2014 `ollama-metrics-shim`, because Ollama 0.30.8 still serves no `/metrics` of its own. `/api/ps` supplies residency, VRAM and the eviction countdown; the throughput and load-time figures come from a **small synthetic generation every 5 minutes**, the way blackbox-exporter probes an endpoint.\n\n**So read the throughput panels as a trend, not as per-request latency.** Real per-request timings exist \u2014 Ollama returns them in each response's final chunk \u2014 but harvesting them means putting a proxy between every caller and the model server, including yolo's. That was rejected: a bug or restart there breaks production inference, and this is a monitoring feature. The probe also refuses to run when no model is resident, so monitoring can never trigger the ~9.5 GB cold load it exists to measure.",
                       "mode": "markdown"
                   },
                   "targets": [],
-                  "title": "What is and is not measured here",
+                  "title": "How these numbers are obtained",
                   "type": "text"
               }
           ],
