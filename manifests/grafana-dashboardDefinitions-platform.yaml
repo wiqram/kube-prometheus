@@ -822,7 +822,7 @@ items:
                       "type": "prometheus",
                       "uid": "$datasource"
                   },
-                  "description": "Fraction of wall-clock the pod spent stalled waiting for CPU. Rises before throttling becomes obvious.",
+                  "description": "NODE-WIDE, not this namespace: per-container PSI is unavailable on a cgroup-v1 node. Fraction of wall-clock some task was stalled waiting for CPU.",
                   "fieldConfig": {
                       "defaults": {
                           "custom": {
@@ -859,12 +859,21 @@ items:
                               "type": "prometheus",
                               "uid": "$datasource"
                           },
-                          "expr": "sum by (pod) (rate(container_pressure_cpu_waiting_seconds_total{namespace=\"yolo\"}[5m]))",
+                          "expr": "rate(node_pressure_cpu_waiting_seconds_total[5m])",
                           "intervalFactor": 2,
-                          "legendFormat": "{{pod}}"
+                          "legendFormat": "cpu waiting"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "rate(node_pressure_memory_waiting_seconds_total[5m])",
+                          "intervalFactor": 2,
+                          "legendFormat": "memory waiting"
                       }
                   ],
-                  "title": "CPU pressure (PSI) \u2014 time waiting",
+                  "title": "Node CPU pressure (PSI)",
                   "type": "timeseries"
               },
               {
@@ -872,7 +881,7 @@ items:
                       "type": "prometheus",
                       "uid": "$datasource"
                   },
-                  "description": "Fraction of wall-clock stalled on IO.",
+                  "description": "NODE-WIDE. `stalled` is the one that hurts: it means EVERY task was blocked on IO. This is the signal behind the container-create timeouts on the ageing SATA SSD \u2014 sustained values here explain rollouts that stall with the CPU idle.",
                   "fieldConfig": {
                       "defaults": {
                           "custom": {
@@ -909,12 +918,21 @@ items:
                               "type": "prometheus",
                               "uid": "$datasource"
                           },
-                          "expr": "sum by (pod) (rate(container_pressure_io_waiting_seconds_total{namespace=\"yolo\"}[5m]))",
+                          "expr": "rate(node_pressure_io_waiting_seconds_total[5m])",
                           "intervalFactor": 2,
-                          "legendFormat": "{{pod}}"
+                          "legendFormat": "io waiting (some)"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "rate(node_pressure_io_stalled_seconds_total[5m])",
+                          "intervalFactor": 2,
+                          "legendFormat": "io stalled (full)"
                       }
                   ],
-                  "title": "IO pressure (PSI) \u2014 time waiting",
+                  "title": "Node IO pressure (PSI)",
                   "type": "timeseries"
               },
               {
@@ -1545,7 +1563,7 @@ items:
                           },
                           "expr": "yolo_worker_ready",
                           "intervalFactor": 2,
-                          "legendFormat": "{{job}} {{pod}}"
+                          "legendFormat": "{{pod}}"
                       }
                   ],
                   "title": "Worker ready (1 = healthy)",
@@ -1595,7 +1613,7 @@ items:
                           },
                           "expr": "yolo_worker_progress_stale_seconds",
                           "intervalFactor": 2,
-                          "legendFormat": "stale {{job}}"
+                          "legendFormat": "stale {{pod}}"
                       },
                       {
                           "datasource": {
@@ -1604,7 +1622,7 @@ items:
                           },
                           "expr": "yolo_worker_max_stale_seconds",
                           "intervalFactor": 2,
-                          "legendFormat": "ceiling {{job}}"
+                          "legendFormat": "ceiling {{pod}}"
                       }
                   ],
                   "title": "Worker progress staleness vs its own ceiling",
@@ -2536,7 +2554,7 @@ items:
                       "type": "prometheus",
                       "uid": "$datasource"
                   },
-                  "description": "Fraction of wall-clock the pod spent stalled waiting for CPU. Rises before throttling becomes obvious.",
+                  "description": "NODE-WIDE, not this namespace: per-container PSI is unavailable on a cgroup-v1 node. Fraction of wall-clock some task was stalled waiting for CPU.",
                   "fieldConfig": {
                       "defaults": {
                           "custom": {
@@ -2573,12 +2591,21 @@ items:
                               "type": "prometheus",
                               "uid": "$datasource"
                           },
-                          "expr": "sum by (pod) (rate(container_pressure_cpu_waiting_seconds_total{namespace=\"ollama\"}[5m]))",
+                          "expr": "rate(node_pressure_cpu_waiting_seconds_total[5m])",
                           "intervalFactor": 2,
-                          "legendFormat": "{{pod}}"
+                          "legendFormat": "cpu waiting"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "rate(node_pressure_memory_waiting_seconds_total[5m])",
+                          "intervalFactor": 2,
+                          "legendFormat": "memory waiting"
                       }
                   ],
-                  "title": "CPU pressure (PSI) \u2014 time waiting",
+                  "title": "Node CPU pressure (PSI)",
                   "type": "timeseries"
               },
               {
@@ -2586,7 +2613,7 @@ items:
                       "type": "prometheus",
                       "uid": "$datasource"
                   },
-                  "description": "Fraction of wall-clock stalled on IO.",
+                  "description": "NODE-WIDE. `stalled` is the one that hurts: it means EVERY task was blocked on IO. This is the signal behind the container-create timeouts on the ageing SATA SSD \u2014 sustained values here explain rollouts that stall with the CPU idle.",
                   "fieldConfig": {
                       "defaults": {
                           "custom": {
@@ -2623,12 +2650,21 @@ items:
                               "type": "prometheus",
                               "uid": "$datasource"
                           },
-                          "expr": "sum by (pod) (rate(container_pressure_io_waiting_seconds_total{namespace=\"ollama\"}[5m]))",
+                          "expr": "rate(node_pressure_io_waiting_seconds_total[5m])",
                           "intervalFactor": 2,
-                          "legendFormat": "{{pod}}"
+                          "legendFormat": "io waiting (some)"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "rate(node_pressure_io_stalled_seconds_total[5m])",
+                          "intervalFactor": 2,
+                          "legendFormat": "io stalled (full)"
                       }
                   ],
-                  "title": "IO pressure (PSI) \u2014 time waiting",
+                  "title": "Node IO pressure (PSI)",
                   "type": "timeseries"
               },
               {
@@ -4308,7 +4344,7 @@ items:
                           },
                           "expr": "ollama_probe_tokens_per_second",
                           "intervalFactor": 2,
-                          "legendFormat": "generation tok/s"
+                          "legendFormat": "{{model}} generation"
                       },
                       {
                           "datasource": {
@@ -4317,7 +4353,7 @@ items:
                           },
                           "expr": "ollama_probe_prompt_tokens_per_second",
                           "intervalFactor": 2,
-                          "legendFormat": "prefill tok/s"
+                          "legendFormat": "{{model}} prefill"
                       }
                   ],
                   "title": "Throughput over time",
@@ -4367,7 +4403,7 @@ items:
                           },
                           "expr": "ollama_probe_load_duration_seconds",
                           "intervalFactor": 2,
-                          "legendFormat": "load duration"
+                          "legendFormat": "{{model}}"
                       }
                   ],
                   "title": "Model load time per probe",
@@ -4526,7 +4562,7 @@ items:
                           },
                           "expr": "ollama_probe_success",
                           "intervalFactor": 2,
-                          "legendFormat": "success (1/0)"
+                          "legendFormat": "{{model}} success (1/0)"
                       },
                       {
                           "datasource": {
