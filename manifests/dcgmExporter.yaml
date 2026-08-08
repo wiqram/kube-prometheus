@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------------------
-# dcgm-exporter — GPU metrics for Prometheus (added 2026-08-04, STEP0 plan.md #17)
+# dcgm-exporter — GPU metrics for Prometheus (added 2026-08-04, STEP0 docs/plan.md #17)
 #
 # This box exists for GPU work (ollama, and the quant paths in yolo) and Prometheus held
 # ZERO GPU series until this landed. The `nvidia-device-plugin` addon only *schedules*
