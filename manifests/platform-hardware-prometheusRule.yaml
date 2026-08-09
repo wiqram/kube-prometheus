@@ -21,12 +21,19 @@ metadata:
 # reproduces that script's deliberate 3-consecutive-sample debounce (3 x the */5 cron);
 # a build spike is not a crunch, and an alert that fires on one sample gets muted.
 #
-# WHY NOT node_hwmon_temp_celsius: node-exporter runs with --no-collector.hwmon (upstream
-# kube-prometheus default), so that series DOES NOT EXIST on this cluster — a rule using
-# it would never fire and nothing would ever say so. The x86_pkg_temp thermal zone carries
-# the CPU package temperature instead, and is the same kernel interface
-# resource-crunch-watch.sh already falls back to. Verified present: 72 C at authoring.
-# Enabling the hwmon collector is therefore unnecessary; don't add it just to get coretemp.
+# ON node_hwmon_temp_celsius: this comment used to say the series DOES NOT EXIST here,
+# because node-exporter ran with upstream's --no-collector.hwmon. That changed on
+# 2026-08-09 — nodeExporter-daemonset.yaml now deliberately enables hwmon, because it is
+# the only source of NVMe DRIVE temperature (the GM9000 in M.2_1 holds every app database,
+# Jenkins, Vault and Grafana). So hwmon-based rules are now viable.
+#
+# The CPU rules below still use the x86_pkg_temp thermal zone rather than switching to
+# coretemp: it is the same package-level figure, it is what resource-crunch-watch.sh fell
+# back to, and rewriting a working rule buys nothing. Do NOT add a coretemp rule alongside
+# it — per-core and package temps track each other, so that is two pages per event.
+#
+# Not yet covered: there is no NVMe over-temperature rule. The dashboard surfaces the
+# drive temp, but nothing pages on it. Worth adding (the drive throttles on Composite).
 spec:
   groups:
     - name: platform-hardware.cpu

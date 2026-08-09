@@ -33,7 +33,25 @@ spec:
         - --path.procfs=/host/root/proc
         - --path.udev.data=/host/root/run/udev/data
         - --no-collector.wifi
-        - --no-collector.hwmon
+        # LOCAL ADDITION 2026-08-09 — upstream ships `--no-collector.hwmon` here; we
+        # deliberately do NOT. This box is a workstation, not a rented VM, and hwmon is
+        # the only source of DRIVE temperature: the 4TB Predator GM9000 NVMe in slot
+        # M.2_1 carries every app database, Jenkins, Vault and Grafana, and a hot NVMe
+        # throttles long before it fails. Nothing else exposes it — the node-exporter
+        # `nvme` collector emits only `node_nvme_info` (no temps), and smartctl would
+        # mean a second exporter.
+        #
+        # Enabling it also gives per-core `coretemp` readings, which are strictly better
+        # than the single `node_thermal_zone_temp{type="x86_pkg_temp"}` we had.
+        #
+        # Cheap here because the collector is scoped by the hardware present, not by
+        # workload: this host has 6 hwmon chips (acpitz, nvme, enp5s0, asus, iwlwifi,
+        # coretemp), so this is tens of series, not the per-mountpoint explosion the
+        # filesystem flag below exists to contain.
+        #
+        # Requires no new mounts: /sys is already bind-mounted to /host/sys (read-only)
+        # and sysfs is not namespaced, so the DaemonSet sees the real host sensors from
+        # inside the minikube container.
         - --no-collector.btrfs
         # LOCAL ADDITION 2026-08-04 — everything from `|data|` onward is ours; the prefix is
         # upstream. WHY: node-exporter reports one series per MOUNTPOINT, but alert rules
