@@ -233,6 +233,9 @@ spec:
         - mountPath: /grafana-dashboard-definitions/platform/platform-ollama
           name: grafana-dashboard-platform-ollama
           readOnly: false
+        - mountPath: /grafana-dashboard-definitions/platform/platform-overview
+          name: grafana-dashboard-platform-overview
+          readOnly: false
         - mountPath: /etc/grafana/provisioning/alerting
           name: grafana-alerting-yolo
           readOnly: false
@@ -373,6 +376,9 @@ spec:
       - configMap:
           name: grafana-dashboard-platform-ollama
         name: grafana-dashboard-platform-ollama
+      - configMap:
+          name: grafana-dashboard-platform-overview
+        name: grafana-dashboard-platform-overview
       - configMap:
           name: grafana-alerting-yolo
         name: grafana-alerting-yolo

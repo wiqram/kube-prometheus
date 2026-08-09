@@ -1,4 +1,5 @@
-# Platform dashboards — per-namespace performance & resource usage.
+# Platform dashboards — per-namespace performance & resource usage, plus one
+# whole-box overview (platform-overview: pods/cronjobs, CPU/memory/GPU, temps, disks).
 #
 # OWNED BY THIS REPO, unlike the YOLO folder (see YOLO-OWNERSHIP.md). The split is by
 # SIGNAL, not by subject: everything here comes from platform-level sources the app does
@@ -4807,5 +4808,2613 @@ items:
           "timezone": "browser",
           "title": "Ollama \u2014 performance & resources",
           "uid": "platform-ollama",
+          "version": 1
+      }
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: grafana-dashboard-platform-overview
+    namespace: monitoring
+    labels:
+      app.kubernetes.io/component: grafana
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/part-of: kube-prometheus
+  data:
+    platform-overview.json: |-
+      {
+          "annotations": {
+              "list": []
+          },
+          "editable": true,
+          "graphTooltip": 1,
+          "links": [],
+          "panels": [
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 0
+                  },
+                  "id": 1,
+                  "panels": [],
+                  "title": "At a glance \u2014 is the box healthy right now?",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Host CPU busy across all cores (i9-12900K, 24 threads).",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 0,
+                      "y": 1
+                  },
+                  "id": 2,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "CPU",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Host RAM in use (96 GB total). Uses MemAvailable, so cache/buffers do not count as used.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 4,
+                      "y": 1
+                  },
+                  "id": 3,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Memory",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "RTX 3080 Ti SM utilisation, from the DCGM exporter.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 8,
+                      "y": 1
+                  },
+                  "id": 4,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_GPU_UTIL",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "GPU",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "GPU framebuffer in use (12 GB card). Ollama models dominate this.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 12,
+                      "y": 1
+                  },
+                  "id": 5,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "GPU memory",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "CPU package temperature. node-exporter runs with --no-collector.hwmon here, so node_hwmon_temp_celsius does NOT exist \u2014 x86_pkg_temp is the CPU temp on this box.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "blue",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 45
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "orange",
+                                      "value": 83
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 90
+                                  }
+                              ]
+                          },
+                          "unit": "celsius"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 16,
+                      "y": 1
+                  },
+                  "id": 6,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_thermal_zone_temp{type=\"x86_pkg_temp\"}",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "CPU package",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "GPU core temperature.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "blue",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 45
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "orange",
+                                      "value": 83
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 90
+                                  }
+                              ]
+                          },
+                          "unit": "celsius"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 4,
+                      "x": 20,
+                      "y": 1
+                  },
+                  "id": 7,
+                  "options": {
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showThresholdLabels": false,
+                      "showThresholdMarkers": true
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_GPU_TEMP",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "GPU core",
+                  "type": "gauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pods in Running phase across every namespace.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 0,
+                      "y": 7
+                  },
+                  "id": 8,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{phase=\"Running\"} == 1)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods running",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pods that cannot be scheduled. Sustained non-zero usually means DiskPressure or a resource request nothing can satisfy.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 3,
+                      "y": 7
+                  },
+                  "id": 9,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{phase=\"Pending\"} == 1) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods pending",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pods in Failed phase.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 6,
+                      "y": 7
+                  },
+                  "id": 10,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_pod_status_phase{phase=\"Failed\"} == 1) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Pods failed",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Container restarts in the last 24h across the cluster. A crashlooping pod shows up here first.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "decimals": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 9,
+                      "y": 7
+                  },
+                  "id": 11,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(kube_pod_container_status_restarts_total[24h])) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Restarts (24h)",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "CronJobs defined across all namespaces (db snapshots, vault backups, the yolo pipeline).",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 12,
+                      "y": 7
+                  },
+                  "id": 12,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_cronjob_info)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "CronJobs",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Suspended CronJobs. Non-zero is not necessarily wrong, but a suspended backup job is.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 15,
+                      "y": 7
+                  },
+                  "id": 13,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_cronjob_spec_suspend == 1) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "CronJobs suspended",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Failed Job runs still present in the API.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "decimals": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 1
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 18,
+                      "y": 7
+                  },
+                  "id": 14,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(kube_job_status_failed) or vector(0)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Jobs failed",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Active namespaces.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 3,
+                      "x": 21,
+                      "y": 7
+                  },
+                  "id": 15,
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "none",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "count(kube_namespace_status_phase{phase=\"Active\"} == 1)",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Namespaces",
+                  "type": "stat"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 11
+                  },
+                  "id": 16,
+                  "panels": [],
+                  "title": "Compute \u2014 CPU, memory, load",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Host CPU time by mode, stacked. 'iowait' climbing while 'user' stays flat means the disk is the bottleneck, not the CPU.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 25,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "normal"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 8,
+                      "w": 12,
+                      "x": 0,
+                      "y": 12
+                  },
+                  "id": 17,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (mode) (rate(node_cpu_seconds_total{mode!=\"idle\"}[5m]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "CPU by mode",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Host RAM. 'used' excludes reclaimable cache.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 15,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": [
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "total"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "custom.fillOpacity",
+                                      "value": 0
+                                  },
+                                  {
+                                      "id": "custom.lineStyle",
+                                      "value": {
+                                          "dash": [
+                                              10,
+                                              10
+                                          ],
+                                          "fill": "dash"
+                                      }
+                                  },
+                                  {
+                                      "id": "color",
+                                      "value": {
+                                          "fixedColor": "text",
+                                          "mode": "fixed"
+                                      }
+                                  }
+                              ]
+                          }
+                      ]
+                  },
+                  "gridPos": {
+                      "h": 8,
+                      "w": 12,
+                      "x": 12,
+                      "y": 12
+                  },
+                  "id": 18,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_memory_MemTotal_bytes",
+                          "intervalFactor": 2,
+                          "legendFormat": "total"
+                      }
+                  ],
+                  "title": "Memory used vs total",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Run-queue length. This box has 24 threads, so sustained load above ~24 means processes are waiting for CPU.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 0,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 20
+                  },
+                  "id": 19,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_load1",
+                          "intervalFactor": 2,
+                          "legendFormat": "1m"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_load5",
+                          "intervalFactor": 2,
+                          "legendFormat": "5m"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_load15",
+                          "intervalFactor": 2,
+                          "legendFormat": "15m"
+                      }
+                  ],
+                  "title": "Load average",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "How much of the single node's allocatable capacity is already promised to pods. This is what the scheduler looks at \u2014 it is NOT actual usage, and it is what makes new pods go Pending once it approaches 100%.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 20
+                  },
+                  "id": 20,
+                  "options": {
+                      "displayMode": "gradient",
+                      "orientation": "horizontal",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showUnfilled": true,
+                      "valueMode": "color"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum(kube_pod_container_resource_requests{resource=\"cpu\"}) / sum(kube_node_status_allocatable{resource=\"cpu\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "CPU requests"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "100 * sum(kube_pod_container_resource_requests{resource=\"memory\"}) / sum(kube_node_status_allocatable{resource=\"memory\"})",
+                          "intervalFactor": 2,
+                          "legendFormat": "Memory requests"
+                      }
+                  ],
+                  "title": "Scheduled vs allocatable",
+                  "type": "bargauge"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 27
+                  },
+                  "id": 21,
+                  "panels": [],
+                  "title": "GPU \u2014 RTX 3080 Ti",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "SM = how busy the compute units are. Memory bus = how busy the VRAM interface is.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 15,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 0,
+                      "y": 28
+                  },
+                  "id": 22,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_GPU_UTIL",
+                          "intervalFactor": 2,
+                          "legendFormat": "SM"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_MEM_COPY_UTIL",
+                          "intervalFactor": 2,
+                          "legendFormat": "memory bus"
+                      }
+                  ],
+                  "title": "GPU utilisation",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Framebuffer in MiB. An ollama model load shows as a step change here.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 25,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "normal"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "decmbytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 8,
+                      "y": 28
+                  },
+                  "id": 23,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_FB_USED",
+                          "intervalFactor": 2,
+                          "legendFormat": "used"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_FB_FREE",
+                          "intervalFactor": 2,
+                          "legendFormat": "free"
+                      }
+                  ],
+                  "title": "GPU memory",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Board power draw in watts.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 15,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "watt"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 16,
+                      "y": 28
+                  },
+                  "id": 24,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_POWER_USAGE",
+                          "intervalFactor": 2,
+                          "legendFormat": "draw"
+                      }
+                  ],
+                  "title": "GPU power",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 35
+                  },
+                  "id": 25,
+                  "panels": [],
+                  "title": "Temperatures",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "The temperatures this box actually exposes. There are no drive temps: node-exporter runs with --no-collector.hwmon, so hwmon/NVMe sensors are not scraped.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "blue",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 45
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "orange",
+                                      "value": 83
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 90
+                                  }
+                              ]
+                          },
+                          "unit": "celsius"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 14,
+                      "x": 0,
+                      "y": 36
+                  },
+                  "id": 26,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_thermal_zone_temp{type=\"x86_pkg_temp\"}",
+                          "intervalFactor": 2,
+                          "legendFormat": "CPU package"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_thermal_zone_temp{type=\"acpitz\"}",
+                          "intervalFactor": 2,
+                          "legendFormat": "motherboard (ACPI)"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_GPU_TEMP",
+                          "intervalFactor": 2,
+                          "legendFormat": "GPU core"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_MEMORY_TEMP",
+                          "intervalFactor": 2,
+                          "legendFormat": "GPU memory"
+                      }
+                  ],
+                  "title": "Component temperatures",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Current temperatures. Colour follows the same thresholds as the gauges at the top.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "blue",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "green",
+                                      "value": 45
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "orange",
+                                      "value": 83
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 90
+                                  }
+                              ]
+                          },
+                          "unit": "celsius"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 10,
+                      "x": 14,
+                      "y": 36
+                  },
+                  "id": 27,
+                  "options": {
+                      "displayMode": "gradient",
+                      "orientation": "horizontal",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showUnfilled": true,
+                      "valueMode": "color"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_thermal_zone_temp{type=\"x86_pkg_temp\"}",
+                          "intervalFactor": 2,
+                          "legendFormat": "CPU package"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "node_thermal_zone_temp{type=\"acpitz\"}",
+                          "intervalFactor": 2,
+                          "legendFormat": "motherboard"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_GPU_TEMP",
+                          "intervalFactor": 2,
+                          "legendFormat": "GPU core"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "DCGM_FI_DEV_MEMORY_TEMP",
+                          "intervalFactor": 2,
+                          "legendFormat": "GPU memory"
+                      }
+                  ],
+                  "title": "Right now",
+                  "type": "bargauge"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 43
+                  },
+                  "id": 28,
+                  "panels": [],
+                  "title": "Storage & network",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Percent used per real device, aggregated by device: node-exporter reports the OS partition once per NVIDIA bind-mount, so a per-mountpoint panel draws the same disk eight times. As-built layout: p2 = OS root, p5 = /var, p6 = /mnt/minikube-mnt (every app DB, Jenkins, Vault, Grafana), p7 = /mnt/kachra (registry blobs).",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": 100,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "yellow",
+                                      "value": 70
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 85
+                                  }
+                              ]
+                          },
+                          "unit": "percent"
+                      },
+                      "overrides": [
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "nvme0n1p2"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "displayName",
+                                      "value": "OS root (p2)"
+                                  }
+                              ]
+                          },
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "nvme0n1p5"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "displayName",
+                                      "value": "/var (p5)"
+                                  }
+                              ]
+                          },
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "nvme0n1p6"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "displayName",
+                                      "value": "cluster data (p6)"
+                                  }
+                              ]
+                          },
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "nvme0n1p7"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "displayName",
+                                      "value": "registry (p7)"
+                                  }
+                              ]
+                          }
+                      ]
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 0,
+                      "y": 44
+                  },
+                  "id": 29,
+                  "options": {
+                      "displayMode": "gradient",
+                      "orientation": "horizontal",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showUnfilled": true,
+                      "valueMode": "color"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "max by (device) (100 * (1 - node_filesystem_avail_bytes{fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{fstype!~\"tmpfs|overlay|squashfs\"}))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{device}}"
+                      }
+                  ],
+                  "title": "Disk used",
+                  "type": "bargauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Bytes/sec per block device.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 10,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 8,
+                      "y": 44
+                  },
+                  "id": 30,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (device) (rate(node_disk_read_bytes_total[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "read {{device}}"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (device) (rate(node_disk_written_bytes_total[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "write {{device}}"
+                      }
+                  ],
+                  "title": "Disk throughput",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Host network throughput, excluding loopback and container veth pairs.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 10,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "Bps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 8,
+                      "x": 16,
+                      "y": 44
+                  },
+                  "id": 31,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*|br-.*|docker.*\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "in"
+                      },
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|br-.*|docker.*\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "out"
+                      }
+                  ],
+                  "title": "Network",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 51
+                  },
+                  "id": 32,
+                  "panels": [],
+                  "title": "Workloads \u2014 where the resources are going",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Pod count per namespace.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "max": null,
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "none"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 9,
+                      "w": 8,
+                      "x": 0,
+                      "y": 52
+                  },
+                  "id": 33,
+                  "options": {
+                      "displayMode": "gradient",
+                      "orientation": "horizontal",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "showUnfilled": true,
+                      "valueMode": "color"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (namespace) (kube_pod_info)",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{namespace}}"
+                      }
+                  ],
+                  "title": "Pods by namespace",
+                  "type": "bargauge"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "CPU cores per pod. NOTE: on this node the kubelet's container_* series carry namespace and pod but NO container label, so there is no per-container breakdown to add.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 10,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 9,
+                      "w": 8,
+                      "x": 8,
+                      "y": 52
+                  },
+                  "id": 34,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace!=\"\"}[5m])))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{namespace}}/{{pod}}"
+                      }
+                  ],
+                  "title": "Top 10 pods by CPU",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Working-set bytes per pod \u2014 what the kubelet uses for OOM decisions.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 10,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "bytes"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 9,
+                      "w": 8,
+                      "x": 16,
+                      "y": 52
+                  },
+                  "id": 35,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "topk(10, sum by (namespace, pod) (container_memory_working_set_bytes{namespace!=\"\"}))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{namespace}}/{{pod}}"
+                      }
+                  ],
+                  "title": "Top 10 pods by memory",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 61
+                  },
+                  "id": 36,
+                  "panels": [],
+                  "title": "CronJobs \u2014 last run",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Time since each CronJob last scheduled a run, newest first. A backup or snapshot job whose age has grown past its interval is the thing to spot here \u2014 e.g. the weekly DR backup should never exceed ~7 days.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "align": "auto",
+                              "cellOptions": {
+                                  "type": "auto"
+                              },
+                              "inspect": false
+                          },
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "s"
+                      },
+                      "overrides": [
+                          {
+                              "matcher": {
+                                  "id": "byName",
+                                  "options": "Age"
+                              },
+                              "properties": [
+                                  {
+                                      "id": "custom.cellOptions",
+                                      "value": {
+                                          "mode": "gradient",
+                                          "type": "gauge"
+                                      }
+                                  },
+                                  {
+                                      "id": "max",
+                                      "value": 604800
+                                  }
+                              ]
+                          }
+                      ]
+                  },
+                  "gridPos": {
+                      "h": 10,
+                      "w": 24,
+                      "x": 0,
+                      "y": 62
+                  },
+                  "id": 37,
+                  "options": {
+                      "footer": {
+                          "show": false
+                      },
+                      "showHeader": true,
+                      "sortBy": [
+                          {
+                              "desc": true,
+                              "displayName": "Age"
+                          }
+                      ]
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "time() - kube_cronjob_status_last_schedule_time",
+                          "format": "table",
+                          "instant": true,
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Time since last scheduled run",
+                  "transformations": [
+                      {
+                          "id": "organize",
+                          "options": {
+                              "excludeByName": {
+                                  "Time": true,
+                                  "__name__": true,
+                                  "container": true,
+                                  "endpoint": true,
+                                  "instance": true,
+                                  "job": true,
+                                  "pod": true,
+                                  "service": true,
+                                  "uid": true
+                              },
+                              "indexByName": {
+                                  "Value": 2,
+                                  "cronjob": 1,
+                                  "namespace": 0
+                              },
+                              "renameByName": {
+                                  "Value": "Age",
+                                  "cronjob": "CronJob",
+                                  "namespace": "Namespace"
+                              }
+                          }
+                      }
+                  ],
+                  "type": "table"
+              }
+          ],
+          "refresh": "1m",
+          "schemaVersion": 39,
+          "tags": [
+              "platform",
+              "overview",
+              "resources"
+          ],
+          "templating": {
+              "list": [
+                  {
+                      "current": {},
+                      "hide": 0,
+                      "label": "Data source",
+                      "name": "datasource",
+                      "query": "prometheus",
+                      "regex": "",
+                      "type": "datasource"
+                  }
+              ]
+          },
+          "time": {
+              "from": "now-6h",
+              "to": "now"
+          },
+          "timepicker": {},
+          "timezone": "browser",
+          "title": "Private cloud \u2014 overview",
+          "uid": "platform-overview",
           "version": 1
       }
