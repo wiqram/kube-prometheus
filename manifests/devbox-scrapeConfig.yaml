@@ -1,0 +1,63 @@
+# Scrape the DEV BOX (vik@10.10.10.2) over the 10GbE point-to-point link.
+#
+# The dev box is not in the cluster, so there is no DaemonSet or ServiceMonitor to
+# hang this off — it is a plain host exposing node-exporter on the /30 address. The
+# dev-box side is stood up by STEP0's devbox-metrics.sh (a node-exporter CONTAINER
+# plus an nvidia-smi textfile writer, because `vik` has no passwordless sudo and the
+# box has no nvidia-container-toolkit for a DCGM exporter).
+#
+##### THE DEV BOX IS OPTIONAL — NOTHING HERE MAY DEPEND ON IT ######################
+#
+# It is a dual-boot workstation. It is off, or running Windows, a large fraction of
+# the time, and that is NORMAL, not an incident. Everything about this file is chosen
+# so that its absence is a non-event:
+#
+#   * A static target that never answers costs Prometheus nothing. `up` goes to 0,
+#     the series go stale, and scraping continues unaffected. There is no retry
+#     backoff to tune and no config-reload failure: an unreachable static target is
+#     not a config error, so Prometheus starts and reloads fine whether or not the
+#     box exists. Removing the dev box entirely requires no change here.
+#   * scrapeTimeout is deliberately SHORT (5s, well under the 30s interval). A box
+#     that is powered off refuses/blackholes fast, but one that is mid-suspend can
+#     hang a connection; a short timeout keeps a wedged target from occupying a
+#     scrape slot.
+#   * NO alert is wired to this target's health. kube-prometheus's TargetDown would
+#     otherwise page every time someone boots into Windows, so alertmanager-secret.yaml
+#     routes TargetDown{job="devbox"} to the `null` receiver — the same pattern used
+#     for KubeSchedulerDown/KubeControllerManagerDown. If you ever make this box
+#     always-on and WANT to be told, delete that route.
+#   * The dashboard (grafana-dashboard-platform-devbox) leads with an Online/Offline
+#     panel driven by `up`, so an offline box reads as "offline", not as broken
+#     monitoring. Its panels use `or vector(0)` where a bare query would render the
+#     unhelpful "No data".
+#
+# Nothing in the prod bootstrap path waits on, or fails without, this target:
+# start-scratch.sh applies manifests/ wholesale and never contacts the dev box.
+####################################################################################
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: ScrapeConfig
+metadata:
+  name: devbox
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/component: exporter
+    app.kubernetes.io/name: devbox-node-exporter
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  # 30s matches the rest of the platform; the link is 10GbE and idle.
+  scrapeInterval: 30s
+  scrapeTimeout: 5s
+  staticConfigs:
+    - targets:
+        # The 10GbE /30 address, NOT the LAN one (192.168.50.161): node-exporter has
+        # no authentication, and binding/scraping on the point-to-point link keeps it
+        # off the house LAN. devbox-metrics.sh pins the listener to the same address.
+        - 10.10.10.2:9100
+  relabelings:
+    # Without this the job label is the generated "scrapeConfig/monitoring/devbox",
+    # which is unreadable in the dashboard legends and in the Alertmanager route
+    # below. Everything else keys off job="devbox".
+    - targetLabel: job
+      replacement: devbox
+    - targetLabel: instance
+      replacement: devbox
