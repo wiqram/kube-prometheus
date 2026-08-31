@@ -4779,6 +4779,615 @@ items:
                   "targets": [],
                   "title": "How these numbers are obtained",
                   "type": "text"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 144
+                  },
+                  "panels": [],
+                  "title": "Token usage \u2014 real traffic (token-tap)",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "All token types (prompt + completion), all models, summed for a single 'how much did this GPU do today' headline.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 6,
+                      "x": 0,
+                      "y": 145
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(ollama_router_tokens_total{box=\"dev\"}[1d]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Tokens today \u2014 dev",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "All token types (prompt + completion), all models, summed for a single 'how much did this GPU do today' headline.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 6,
+                      "x": 6,
+                      "y": 145
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(ollama_router_tokens_total{box=\"prod\"}[1d]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Tokens today \u2014 prod",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 6,
+                      "x": 12,
+                      "y": 145
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(ollama_router_tokens_total{box=\"dev\"}[7d]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Tokens (7d) \u2014 dev",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 4,
+                      "w": 6,
+                      "x": 18,
+                      "y": 145
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(increase(ollama_router_tokens_total{box=\"prod\"}[7d]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Tokens (7d) \u2014 prod",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Real per-request token counts from token-tap, stacked by model and by prompt/completion. Router-path traffic only.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 25,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "normal"
+                              }
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 149
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (model, type) (increase(ollama_router_tokens_total{box=\"dev\"}[1d]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}} \u2014 {{type}}"
+                      }
+                  ],
+                  "title": "Tokens per day by model \u2014 dev",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Real per-request token counts from token-tap, stacked by model and by prompt/completion. Router-path traffic only.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 25,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "normal"
+                              }
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 149
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (model, type) (increase(ollama_router_tokens_total{box=\"prod\"}[1d]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}} \u2014 {{type}}"
+                      }
+                  ],
+                  "title": "Tokens per day by model \u2014 prod",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Real completion-token throughput: rate(tokens)/rate(Ollama-reported eval seconds), matched by box. Unlike ollama_probe_tokens_per_second (a synthetic probe run every 300s), this reflects real inference traffic seen by token-tap.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 156
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (box) (rate(ollama_router_tokens_total{type=\"completion\"}[5m])) / sum by (box) (rate(ollama_router_eval_duration_seconds_total{type=\"completion\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{box}}"
+                      }
+                  ],
+                  "title": "Real tokens/sec \u2014 generation",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Real prompt-token (prefill) throughput: rate(tokens)/rate(Ollama-reported eval seconds), matched by box. Unlike ollama_probe_prompt_tokens_per_second (a synthetic probe run every 300s), this reflects real inference traffic seen by token-tap.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 156
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (box) (rate(ollama_router_tokens_total{type=\"prompt\"}[5m])) / sum by (box) (rate(ollama_router_eval_duration_seconds_total{type=\"prompt\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{box}}"
+                      }
+                  ],
+                  "title": "Real tokens/sec \u2014 prefill",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "reqps"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 163
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (box) (rate(ollama_router_tap_requests_total{status=\"ok\"}[5m]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{box}}"
+                      }
+                  ],
+                  "title": "Requests/sec through the counting path, by box",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "dev/prod = traffic is going through token-tap and being counted. dev_direct/prod_direct = the tap failed its health check and HAProxy fell back to the uncounted direct path \u2014 inference still works, but the token panels above are missing that traffic for this window.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "custom": {
+                              "fillOpacity": 8,
+                              "gradientMode": "opacity",
+                              "lineWidth": 1,
+                              "showPoints": "never",
+                              "spanNulls": true
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 163
+                  },
+                  "options": {
+                      "legend": {
+                          "displayMode": "list",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "haproxy_server_up{server=~\"dev|dev_direct|prod|prod_direct\"}",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{server}}"
+                      }
+                  ],
+                  "title": "Counting-path health (1 = healthy)",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "Inference responses relayed fine but whose token counts token-tap could not parse. Should normally be ~0; a health signal for the tap itself, never for the client.",
+                  "fieldConfig": {
+                      "defaults": {
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  },
+                                  {
+                                      "color": "red",
+                                      "value": 0.001
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 6,
+                      "x": 0,
+                      "y": 170
+                  },
+                  "options": {
+                      "colorMode": "value",
+                      "graphMode": "area",
+                      "justifyMode": "auto",
+                      "reduceOptions": {
+                          "calcs": [
+                              "lastNotNull"
+                          ],
+                          "fields": "",
+                          "values": false
+                      },
+                      "textMode": "auto"
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(ollama_router_token_parse_errors_total[5m]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Token parse errors (5m rate)",
+                  "type": "stat"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {},
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 6,
+                      "w": 18,
+                      "x": 6,
+                      "y": 170
+                  },
+                  "options": {
+                      "content": "**Router-path traffic only** \u2014 same caveat as the existing request-count stats above: quantos/embeddings calling prod directly are not counted, here or there.\n\n**Counts require the tap to be healthy.** See the \"Counting-path health\" panel: while a box is on its `_direct` fallback, the tokens moving through it are real but invisible to every panel in this row.\n\n**Cross-check against GPU utilisation** (the \"GPU utilisation\" panel in the RTX 3080 Ti row above). GPU busy with ~0 tokens/sec means something other than Ollama inference is using the card, or direct (uncounted) traffic is running. GPU idle + ~0 tokens/sec means the model is genuinely sitting idle.",
+                      "mode": "markdown"
+                  },
+                  "targets": [],
+                  "title": "Scope of these numbers",
+                  "type": "text"
               }
           ],
           "refresh": "1m",
@@ -9505,6 +10114,205 @@ items:
                       }
                   ],
                   "title": "Network",
+                  "type": "timeseries"
+              },
+              {
+                  "collapsed": false,
+                  "gridPos": {
+                      "h": 1,
+                      "w": 24,
+                      "x": 0,
+                      "y": 47
+                  },
+                  "id": 26,
+                  "panels": [],
+                  "title": "AI model usage (Ollama, via prod's router)",
+                  "type": "row"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "description": "From token-tap, which runs on prod's ollama-router (this box is its 'dev' backend over 10GbE) \u2014 router-path traffic only. Compare against the 'GPU utilisation' panel above: idle GPU + ~0 tokens/sec here means this card is genuinely sitting idle; nonzero GPU util with ~0 tokens/sec means something other than router-proxied Ollama traffic is using it (e.g. a direct call bypassing the router, or a non-Ollama process).",
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 15,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "none"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 0,
+                      "y": 48
+                  },
+                  "id": 27,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum(rate(ollama_router_tokens_total{box=\"dev\",type=\"completion\"}[5m])) / sum(rate(ollama_router_eval_duration_seconds_total{box=\"dev\",type=\"completion\"}[5m]))",
+                          "intervalFactor": 2
+                      }
+                  ],
+                  "title": "Real tokens/sec on this GPU",
+                  "type": "timeseries"
+              },
+              {
+                  "datasource": {
+                      "type": "prometheus",
+                      "uid": "$datasource"
+                  },
+                  "fieldConfig": {
+                      "defaults": {
+                          "color": {
+                              "mode": "palette-classic"
+                          },
+                          "custom": {
+                              "axisBorderShow": false,
+                              "axisCenteredZero": false,
+                              "axisColorMode": "text",
+                              "axisLabel": "",
+                              "axisPlacement": "auto",
+                              "barAlignment": 0,
+                              "drawStyle": "line",
+                              "fillOpacity": 25,
+                              "gradientMode": "opacity",
+                              "hideFrom": {
+                                  "legend": false,
+                                  "tooltip": false,
+                                  "viz": false
+                              },
+                              "insertNulls": false,
+                              "lineInterpolation": "smooth",
+                              "lineWidth": 2,
+                              "pointSize": 5,
+                              "scaleDistribution": {
+                                  "type": "linear"
+                              },
+                              "showPoints": "never",
+                              "spanNulls": false,
+                              "stacking": {
+                                  "group": "A",
+                                  "mode": "normal"
+                              },
+                              "thresholdsStyle": {
+                                  "mode": "off"
+                              }
+                          },
+                          "min": 0,
+                          "thresholds": {
+                              "mode": "absolute",
+                              "steps": [
+                                  {
+                                      "color": "green",
+                                      "value": null
+                                  }
+                              ]
+                          },
+                          "unit": "short"
+                      },
+                      "overrides": []
+                  },
+                  "gridPos": {
+                      "h": 7,
+                      "w": 12,
+                      "x": 12,
+                      "y": 48
+                  },
+                  "id": 28,
+                  "options": {
+                      "legend": {
+                          "calcs": [
+                              "mean",
+                              "max",
+                              "lastNotNull"
+                          ],
+                          "displayMode": "table",
+                          "placement": "bottom",
+                          "showLegend": true
+                      },
+                      "tooltip": {
+                          "mode": "multi",
+                          "sort": "desc"
+                      }
+                  },
+                  "targets": [
+                      {
+                          "datasource": {
+                              "type": "prometheus",
+                              "uid": "$datasource"
+                          },
+                          "expr": "sum by (model, type) (increase(ollama_router_tokens_total{box=\"dev\"}[1d]))",
+                          "intervalFactor": 2,
+                          "legendFormat": "{{model}} \u2014 {{type}}"
+                      }
+                  ],
+                  "title": "Tokens per day by model",
                   "type": "timeseries"
               }
           ],

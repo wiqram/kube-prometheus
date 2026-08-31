@@ -34,8 +34,18 @@ spec:
   probeSelector: {}
   # Single-node cluster: 2 replicas was HA for no benefit. 1 replica.
   replicas: 1
-  # Cap on-disk TSDB so Prometheus can't slowly fill the node's ephemeral storage.
-  retention: 7d
+  # Cap on-disk TSDB so Prometheus can't slowly fill the node's ephemeral storage (no
+  # storageSpec here — this lives on the node's own ephemeral disk, i.e. the host's
+  # /var/lib/docker, NOT a durable /mnt/minikube-mnt PV; a minikube rebuild wipes it
+  # regardless of retention, so there is no DR angle to this number, only disk sizing).
+  #
+  # Raised 7d -> 30d (2026-08-31) for the ollama token-usage dashboard's per-day/week
+  # panels — increase(...[1d]) over more than a few days needs more than 7d of history
+  # to show a trend. Measured cost at the time: 629 MiB for 7 days (~90 MiB/day), against
+  # 809 GiB free on /var/lib/docker — 30d is ~2.7 GiB, noise on this box. Revisit the
+  # number if the app-namespace custom-metrics scope (docs: CUSTOM-METRICS.md) grows a
+  # lot, since that's what actually drives series count, not this window.
+  retention: 30d
   resources:
     requests:
       cpu: 100m
