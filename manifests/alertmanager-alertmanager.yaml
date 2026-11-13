@@ -30,7 +30,13 @@ spec:
     requests:
       cpu: 4m
       memory: 100Mi
-  secrets: []
+  # Token for the platform's self-hosted ntfy (2026-11-13), read by the webhook receivers via
+  # credentials_file so it never appears in the committed alertmanager-secret.yaml. Mounted
+  # at /etc/alertmanager/secrets/alertmanager-ntfy-token/token. Created from STEP0/.env by
+  # STEP0 `ntfy-server.sh --k8s-secret`, which start-scratch.sh runs BEFORE manifests/ —
+  # if it is missing, alertmanager-main-0 cannot start.
+  secrets:
+  - alertmanager-ntfy-token
   securityContext:
     fsGroup: 2000
     runAsNonRoot: true
