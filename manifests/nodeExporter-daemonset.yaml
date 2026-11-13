@@ -74,7 +74,18 @@ spec:
         # modules directory. That mount is kept precisely because it is the only sda5 path
         # whose name has no driver version in it — the libnvidia-*.so paths embed
         # "580.173.02" and would silently stop matching on the next driver upgrade.
-        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/k3s/containerd/.+|var/lib/docker/.+|var/lib/kubelet/pods/.+|data|etc/(hostname|hosts|resolv\.conf)|etc/nvidia/.+|run/credentials/.+|run/nvidia-persistenced/.+|tmp/hostpath.*|usr/bin/nvidia-.+|usr/lib/firmware/nvidia/.+|usr/lib/x86_64-linux-gnu/.+)($|/)
+        #
+        # REGRESSED, then re-fixed 2026-11-13: a newer nvidia-container-toolkit started
+        # bind-mounting ten MORE host-root files (/etc/OpenCL, /etc/vulkan, /usr/share/
+        # {X11,egl,glvnd,nvidia}) — 7 series had quietly become 18, so a filling root would
+        # page 11 times. It also mounts a 4 KiB, 100%-full tmpfs at
+        # /run/nvidia-ctk-hook/<uuid>, which fired NodeFilesystemAlmostOutOfSpace (critical
+        # AND warning) continuously from 11-07 to 11-13 — a permanent false critical, the
+        # kind that teaches the reader to skim past the real one. Excluded by DIRECTORY,
+        # never by file or uuid, for the same reason as the driver-version note above.
+        # To re-check after a toolkit/driver upgrade: `count(node_filesystem_size_bytes)`
+        # should be 7; anything more is a new bind-mount to add here.
+        - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run/k3s/containerd/.+|var/lib/docker/.+|var/lib/kubelet/pods/.+|data|etc/(hostname|hosts|resolv\.conf)|etc/nvidia/.+|etc/(OpenCL|vulkan)/.+|run/credentials/.+|run/nvidia-persistenced/.+|run/nvidia-ctk-hook/.+|tmp/hostpath.*|usr/bin/nvidia-.+|usr/lib/firmware/nvidia/.+|usr/lib/x86_64-linux-gnu/.+|usr/share/(X11|egl|glvnd|nvidia)/.+)($|/)
         - --collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$
         - --collector.netdev.device-exclude=^(veth.*|[a-f0-9]{15})$
         image: quay.io/prometheus/node-exporter:v1.11.1
