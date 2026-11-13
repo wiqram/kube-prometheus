@@ -78,6 +78,18 @@ spec:
               key: admin-password
               name: grafana-admin
               optional: true
+        # Bearer token for the platform's SELF-HOSTED ntfy (2026-11-13), used by yolo's
+        # Grafana contact point (grafana-alerting-yolo ConfigMap) as $__env{NTFY_YOLO_TOKEN}
+        # — so the token is in no ConfigMap and no git repo. The Secret is created from STEP0
+        # .env by `ntfy-server.sh --k8s-secret` (start-scratch). Same pattern as the admin
+        # login above: optional, because the observability stack must start even when the
+        # Secret (or Vault) is not there yet — Grafana deliberately uses no vault-agent.
+        - name: NTFY_YOLO_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: token
+              name: grafana-ntfy-yolo-token
+              optional: true
         image: grafana/grafana:13.1.1
         name: grafana
         ports:
