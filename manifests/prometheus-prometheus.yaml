@@ -34,10 +34,12 @@ spec:
   probeSelector: {}
   # Single-node cluster: 2 replicas was HA for no benefit. 1 replica.
   replicas: 1
-  # Cap on-disk TSDB so Prometheus can't slowly fill the node's ephemeral storage (no
-  # storageSpec here — this lives on the node's own ephemeral disk, i.e. the host's
-  # /var/lib/docker, NOT a durable /mnt/minikube-mnt PV; a minikube rebuild wipes it
-  # regardless of retention, so there is no DR angle to this number, only disk sizing).
+  # TSDB retention. Since 2026-11-13 the TSDB is DURABLE (see `storage:` below and
+  # prometheus-dataVolume.yaml) — on /mnt/minikube-mnt, swept by the weekly DR archive —
+  # so these two numbers now size BOTH the live volume and every weekly archive.
+  # Whichever limit is hit first wins: 30d is the intent, retentionSize is the ceiling
+  # that keeps a series explosion from filling the shared mount (5.8 GiB / 27 d measured
+  # at the switch, so 20GB is ~3x headroom).
   #
   # Raised 7d -> 30d (2026-08-31) for the ollama token-usage dashboard's per-day/week
   # panels — increase(...[1d]) over more than a few days needs more than 7d of history
@@ -46,6 +48,24 @@ spec:
   # number if the app-namespace custom-metrics scope (docs: CUSTOM-METRICS.md) grows a
   # lot, since that's what actually drives series count, not this window.
   retention: 30d
+  retentionSize: 20GB
+  # Durable TSDB on a pre-created manual PV (prometheus-dataVolume.yaml). volumeName pins
+  # the claim the StatefulSet generates to that PV. disableMountSubPath: the TSDB sits at
+  # the volume root (like grafana-data) instead of the operator's default `prometheus-db/`
+  # subdirectory, so the host path IS the TSDB.
+  storage:
+    disableMountSubPath: true
+    volumeClaimTemplate:
+      metadata:
+        name: prometheus-k8s-db
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: manual
+        volumeName: prometheus-data-pv
+        resources:
+          requests:
+            storage: 30Gi
   resources:
     requests:
       cpu: 100m

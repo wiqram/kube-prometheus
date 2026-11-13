@@ -1,0 +1,91 @@
+# Durable storage for Prometheus' TSDB (2026-11-13). Same pattern as
+# grafana-dataVolume.yaml: a pre-created, Retain, storageClassName: manual hostPath PV on
+# the shared mount, plus a pre-created PVC pinned to it by volumeName.
+#
+# WHY: until now Prometheus ran on an emptyDir (no `storage:` in prometheus-prometheus.yaml),
+# i.e. on the node's ephemeral disk. Every pod RE-CREATION (not just a minikube rebuild —
+# an operator-driven StatefulSet replace, a node drain, a manual delete) silently restarted
+# metric history from zero, and the weekly DR archive never contained it. On 2026-11-13 the
+# oldest sample on the box was the 2026-10-16 cluster rebuild, so "how did this look last
+# month?" was unanswerable for every dashboard and every post-mortem.
+#
+# PATHS: in-node /mnt/prometheus-data == host /mnt/minikube-mnt/prometheus-data, so it is
+# swept by the weekly DR tar (backup-minikube-mnt.sh) and off-sited to the WD NAS like
+# every other datastore. A live TSDB copied by tar is the "copy of a running database"
+# CLAUDE.md warns about, but TSDB is the forgiving case: blocks are immutable, and a torn
+# WAL is repaired (truncated) on start — a restore loses at most the last ~2h head block.
+#
+# OWNERSHIP: Prometheus runs as uid 1000 / fsGroup 2000, and a kubelet-created hostPath
+# (DirectoryOrCreate) lands root:root 0755 — fsGroup is NOT applied to hostPath — so the
+# dir is pre-created + chowned through the node by STEP0 start-scratch.sh before these
+# manifests are applied (the same step that prepares /mnt/grafana-data).
+#
+# SIZE: bounded by retention: 30d AND retentionSize in prometheus-prometheus.yaml (whichever
+# hits first). Measured 5.8 GiB for 27 days on 2026-11-13. `capacity` on a hostPath PV is
+# nominal (nothing enforces it); it only has to satisfy the claim.
+#
+# STORAGECLASS `manual`: every durable PV on this box says storageClassName: manual, but
+# until 2026-11-13 no StorageClass object of that name existed — Kubernetes does not need
+# one to bind a claim to a pre-created PV, so nothing ever noticed. prometheus-operator
+# DOES: it validates the class named in its volumeClaimTemplate and refused to reconcile
+# ("storage class \"manual\" does not exist"), leaving Prometheus on its emptyDir. The
+# object below is inert by construction: no-provisioner (it can never create a volume),
+# not the default class (claims that name no class still get `standard`, which
+# verify-recovery.sh FAILs on), and Immediate binding — exactly how every existing manual
+# claim already binds, so creating it changes nothing for vault/grafana/app databases.
+#
+# The PVC name is the one the operator's StatefulSet volumeClaimTemplate generates
+# (<template name>-<pod name> = prometheus-k8s-db-prometheus-k8s-0); pre-creating it
+# means the StatefulSet ADOPTS this claim instead of asking for a dynamic one, and the
+# claimRef below means no other claim can ever take this PV.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: manual
+  labels:
+    app.kubernetes.io/part-of: kube-prometheus
+provisioner: kubernetes.io/no-provisioner
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: prometheus-data-pv
+  labels:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+spec:
+  capacity:
+    storage: 30Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  claimRef:
+    namespace: monitoring
+    name: prometheus-k8s-db-prometheus-k8s-0
+  hostPath:
+    path: /mnt/prometheus-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-k8s-db-prometheus-k8s-0
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/component: prometheus
+    app.kubernetes.io/instance: k8s
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+    operator.prometheus.io/name: k8s
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  volumeName: prometheus-data-pv
+  resources:
+    requests:
+      storage: 30Gi
