@@ -104,3 +104,44 @@ spec:
               GPU {{ $labels.gpu }} framebuffer is {{ $value | humanizePercentage }} full -
               less than 10% of the 12GB card is free. A further model load will fail or fall
               back to CPU. Check what ollama is holding resident.
+
+    # ── Host memory pressure (2026-11-16) ──────────────────────────────────────────────
+    # Upstream has NodeMemoryHighUtilization (RAM % used) but nothing on SWAP or memory
+    # STALLS, and on this box RAM % is the wrong signal: page cache keeps it high on a
+    # healthy day, while a full swap is what the desktop actually feels. On 2026-11-16 the
+    # host sat at 27/29Gi swap (zram full) for hours — /tmp is a RAM tmpfs and held 24Gi of
+    # agent scratch — and nothing paged. node-exporter's meminfo and PSI series are the
+    # HOST's (verified: SwapFree/Shmem match the host /proc/meminfo), so this is a host rule.
+    # job="node-exporter" excludes the dev box's scrape (job="devbox"), which never pages.
+    # STEP0 host-tmp-guard.sh is the fix side; this is the "it's happening again" side.
+    - name: platform-hardware.memory
+      rules:
+        - alert: HostSwapAlmostFull
+          # 7-day history at write time: >80% for ~9.6h, all of it the 11-16 incident.
+          expr: >-
+            1 - node_memory_SwapFree_bytes{job="node-exporter"}
+              / node_memory_SwapTotal_bytes{job="node-exporter"} > 0.80
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Host swap {{ $value | humanizePercentage }} full"
+            description: >-
+              Host swap has been over 80% for 30 minutes ({{ $value | humanizePercentage }}).
+              The desktop and IDE are being paged out. Usual suspects: a RAM-backed /tmp
+              (STEP0: ./host-tmp-guard.sh --status), the minikube cgroup, many Claude sessions.
+        - alert: HostMemoryStalling
+          # PSI "full": share of time ALL non-idle tasks were stalled on memory. 7-day max of
+          # the 15m average at write time was 0.023 (the 11-16 incident) — so 0.02 pages on a
+          # repeat of that day, not on a normal build spike.
+          expr: >-
+            rate(node_pressure_memory_stalled_seconds_total{job="node-exporter"}[15m]) > 0.02
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Host stalled on memory {{ $value | humanizePercentage }} of the time"
+            description: >-
+              For 15 minutes every runnable task on the host was blocked on memory
+              {{ $value | humanizePercentage }} of the time (PSI full) — the machine is
+              thrashing. See HostSwapAlmostFull and STEP0 host-tmp-guard.sh --status.
